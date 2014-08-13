@@ -23,7 +23,7 @@
 
 (defn start-server []
   (when server (stop-server))
-  (reset! server (http/run-server #'all-routes {:port 8080})))
+  (reset! server (http/run-server #'all-routes {:port 9081})))
 
 (comment
   (star-server)
