@@ -19,5 +19,7 @@
 
   :cljsbuild {:builds [{:id "om-test"
                         :source-paths ["src-cljs"]
-                        :compiler {:output-to "resources/public/om-test.js"
-                                   :optimizations :whitespace}}]})
+                        :compiler {:output-to "resources/public/js/om-test.js"
+                                   :output-dir "resources/public/js/"
+                                   :optimizations :whitespace
+                                   :source-map "resources/public/js/om-test.js.map"}}]})
