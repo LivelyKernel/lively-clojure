@@ -5,6 +5,8 @@
             [cljs.core.async :as async :refer [>! <! put! chan]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
+            [goog.style :as gstyle]
+            [cljs-workspace.morph :as morphic]
             ; [clojure.browser.repl :as repl]
             )
   (:import [goog.events EventType]))
@@ -13,80 +15,76 @@
 
 (println "Hello :)")
 
-; (repl/connect "http://localhost:9000/repl")
-
-; now parse a description from a stringified buildSpec
-
-; sample buildSpec
-
-(def clicked-morph
-  (atom nil))
-
 (def app-state 
          (atom {:id 1
                 :text "Hi!"
-                :morph {}
+                :morph {:Position {:x 0 :y 42}}
                 :shape {:BorderWidth 5
-                        :BorderColor "rgb(0,255,0)"
-                        :Fill "rgb(255,0,0)"
-                        :Position {:x 0 :y 0}
-                        :Extent {:x 100 :y 100}}
+                        :BorderColor "rgb(0,0,0)"
+                        :Fill "rgb(255,255,255)"
+                        :Extent {:x 300 :y 300}}
                 :submorphs [{:id 2
-                             :morph {}
+                             :morph {:Position {:x 100 :y 100}}
                              :shape {:Fill "rgb(0,0,255)"
-                                     :Position {:x 42 :y 42}
                                      :Extent {:x 42 :y 42}}
-                             :submorphs []}]}))
+                             :submorphs []}
+                             {:id 3
+                              :morph {:Position {:x 100 :y 100}}
+                              :shape {:Fill "rgb(250, 250, 0)"
+                                      :ShapeClass "Ellipse"
+                                      :Extent {:x 100 :y 100}}}
+                              {:id 5
+                                :morph {:Position {:x 0 :y 0}}
+                                :shape {:Extent {:x 110 :y 40}
+                                        :BorderColor "rgb(92,77, 11)"
+                                        :BorderWidth 2
+                                        :Fill "rgb(255,244,194)"}
+                                :submorphs [
+                                      {:id 4
+                                       :morph {:MorphClass "Text" 
+                                               :Position {:x 10 :y 10}
+                                               :TextString "Hallo Welt!"}
+                                       :shape {:ShapeClass "Text"
+                                               :Extent {:x 100 :y 30}}}]}]}))
 
-; morph property to CSS property translators
+(def text (atom {:id 4
+                 :morph {:MorphClass "Text" :Position {:x 100 :y 24}}
+                 :shape {:ShapeClass "Text"
+                         :Extent {:x 100 :y 30}
+                         :BorderColor "black"
+                         :BorderWidth 2}}))
 
-(defn get-fill [value]
-  {"background" value})
+(om/root
+  morphic/morph
+  app-state
+  {:target (. js/document (getElementById "app"))})
 
-(defn get-position [value]
-   {"position" "absolute" 
-    "left" (:x value)
-    "top" (:y value)})
+;; snapshot the state when it is changed:
 
-(defn get-extent [value]
-  {"height" (:y value)
-   "width" (:x value)})
+(def app-history (atom [@app-state]))
 
-(defn get-border-width [value]
-  {"border-width" value
-   "border-style" "solid"})
+(defn pluralize [n w]
+  (if (> n 1) 
+      (str w "s")
+      (str w)))
 
-(defn get-border-color [value]
-  {"border-color" value
-   "border-style" "solid"})
+(add-watch app-state :history
+  (fn [_ _ _ n]
+    (when-not (= (last @app-history) n)
+      (swap! app-history conj n))
+    (let [c (count @app-history)]
+        (prn (str c " Saved " (pluralize c "State"))))))
 
-; translation from morph data to CSS style prop
+(om/root
+  (fn [app owner]
+    (om/component (dom/button #js {:onClick undo} "Undo!")))
+  app-state 
+  {:target (. js/document (getElementById "inspector"))})
 
-(defn convertToJsObj [dict]
-  (apply js-obj (apply concat (seq dict))))
-
-(defn extract-props [state]
-    (convertToJsObj {"style" 
-      (convertToJsObj (apply merge 
-        (map (fn [[prop value]] 
-            (case prop 
-              :Fill (get-fill value)
-              :Position (get-position value)
-              :Extent (get-extent value)
-              :BorderWidth (get-border-width value)
-              :BorderColor (get-border-color value)
-              ;; more to come... 
-              )) state)))}))
-
-; morph component + rendering functions
-
-(declare shape)
-(declare render-submorphs)
-
-(defn listen [el type]
-  (let [out (chan)]
-    (events/listen el type #(put! out %))
-    out))
+  (defn undo [e]
+    (when (> (count @app-history) 1)
+      (swap! app-history pop)
+      (reset! app-state (last @app-history))))
 
 (defn morph [app owner]
   (reify
