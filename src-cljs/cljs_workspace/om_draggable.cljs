@@ -41,7 +41,7 @@
         [new-pos-x, new-pos-y] [(+ (old-pos :x) delta-x) (+ (old-pos :y) delta-y)]]
     (when (= (@app :id) @clicked-morph)
       (swap! prev-cursor-pos #(identity [(.-clientX e) (.-clientY e)]))
-      (om/update! app [:morph :Position] {:x new-pos-x :y new-pos-y}))))
+      (om/update! app [:morph :Position] {:x new-pos-x :y new-pos-y} :update))))
 
 (defn stop-dragging [e app]
   (swap! clicked-morph #(identity nil))
