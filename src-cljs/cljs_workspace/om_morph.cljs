@@ -7,7 +7,7 @@
             [om.dom :as dom :include-macros true]
             [goog.style :as gstyle]
             [goog.dom :as gdom]
-            [cljs-workspace.draggable :as draggable]
+            [cljs-workspace.draggable :as draggable :refer [clicked-morph]]
             ; [clojure.browser.repl :as repl]
             )
   (:import [goog.events EventType]))
@@ -92,7 +92,7 @@
 (defn handle-input [e owner app]
   (let [span (om/get-node owner "myInput")]
     (prn (.-innerText span))
-    (om/update! app [:morph :TextString] (.-innerText span))))
+    (om/update! app [:morph :TextString] (.-innerText span) :update)))
 
 (defn save-input [e owner app]
   (prn (.-key e))
@@ -101,7 +101,7 @@
 (defn create-text-node [app owner]
     (dom/div #js {:className "visible Selection"
                   :contentEditable true
-                  :onMouseDown #(swap! clicked-morph (@app :id))
+                  :onMouseDown #(swap! clicked-morph (fn [_] @app :id))
                   :onInput #(handle-input % owner app)
                   ; :onKeyDown #(when (.-metaKey %) (save-input % owner app))} (dom/span #js {
                     :ref "myInput"} (get-in app [:morph :TextString])))
