@@ -13,9 +13,12 @@
                  [org.clojure/clojurescript "0.0-2277"]
                  [http-kit "2.1.16"]
                  [compojure "1.1.5"]
+                 [ring "1.3.1"]
+				 [fogus/ring-edn "0.2.0"]
                  [om "0.6.5"]
                  [org.clojure/core.async "0.1.303.0-886421-alpha"]
-                 [cljs-tooling "0.1.3"]]
+                 [cljs-tooling "0.1.3"]
+                 [om-sync "0.1.1"]]
 
   :cljsbuild {:builds [{:id "om-test"
                         :source-paths ["src-cljs"]
