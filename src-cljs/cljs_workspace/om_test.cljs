@@ -67,41 +67,83 @@
 
 ;; snapshot the state when it is changed:
 
-; (def app-history (atom [@app-state]))
+; The history actually stores each state as a first class object, 
+; even after branching happens:
+;
+; -----\----
+;       \------
+;
+; [ . . . . . {new-branch: \ old-val: _ } . . . ] <
+;                           \                      \  
+;                            V                      \
+;                           {:offset-index _ :parent | :coll [ . . . .  ] }
 
-; (defn pluralize [n w]
-;   (if (> n 1) 
-;       (str w "s")
-;       (str w)))
+(def app-history (atom {:offset-index 0 :coll (atom [@app-state])}))
 
-; (add-watch app-state :history
-;   (fn [_ _ _ n]
-;     (when-not (= (last @app-history) n)
-;       (swap! app-history conj n))
-;     (let [c (count @app-history)]
-;         (prn (str c " Saved " (pluralize c "State"))))))
+(def current-branch (atom @app-history))
+
+(def reverted-to (atom -1))
+
+(defn pluralize [n w]
+  (if (> n 1) 
+      (str w "s")
+      (str w)))
+
+(defn nth-history 
+  ([i] 
+    (nth-history i current-branch))
+  ([i branch]
+    (nth @(@branch :coll) i)))
+
+(defn branch-at [i n]
+  (prn "Branching at " i)
+  (let [index i
+        new-branch {:offset-index i :coll (atom []) :parent (atom @current-branch)}
+        ; split the current branch
+        coll @(@current-branch :coll)
+        [pre-branch post-branch] [(vec (take index coll)) (vec (drop index coll))]
+        ; insert the branching point into the old branch
+        branched-branch (into [] (concat pre-branch [{:new-branch new-branch :old-value (first post-branch)}] (rest post-branch)))]
+      ; update the old branch with the inserted version
+      (reset! (@current-branch :coll) branched-branch)
+      ; let current branch pointer point to new branch
+      (reset! current-branch new-branch)
+      (reset! reverted-to -1)))
+
+(defn save-state [n]
+    (cond (> @reverted-to -1) 
+      ; we have to branch because a modification based on a reverted state:
+      (branch-at @reverted-to n)
+      ; else just append to history
+      :else
+      (let [b @(@current-branch :coll)]
+        (when-not (= (last b) n)
+          (swap! (@current-branch :coll) conj n))
+        (let [c (+ (@current-branch :offset-index) (count b))]
+            (prn (str c " Saved " (pluralize c "State")))))))
+
+(defn revert-to [i]
+  (prn "request revert: " i)
+  (let [index (* (dec (count @(@current-branch :coll))) (/ i 100))]
+    (when-let [state (when (>= index 1) (nth-history index))]
+      (prn "revert to: " index)
+      (reset! app-state state)
+      (reset! reverted-to index))))
 
 ; (defn undo [e]
 ;   (when (> (count @app-history) 1)
 ;     (swap! app-history pop)
 ;     (reset! app-state (last @app-history))))
 
-; (om/root
-;   (fn [app owner]
-;     (om/component (dom/button #js {:onClick undo} "Undo!")))
-;   app-state 
-;   {:target (. js/document (getElementById "inspector"))})
+(om/root
+  (fn [app owner]
+    (om/component (dom/input #js {:type "range" :min 0 :max 100 :defaultValue 100
+                                  :onChange #(revert-to (.. % -target -value))})))
+  {} 
+  {:target (. js/document (getElementById "inspector"))})
 
 (defn send-update [state]
-  (.send @socket (pr-str (select-keys (state :tx-data) [:new-value :path])))
-  
-  ; (edn-xhr 
-  ;   {:method :put
-  ;   :url "/data"
-  ;   :on-error (fn [res tx-data] (prn tx-data))
-  ;   :on-complete (fn [res] (prn "updated"))
-  ;   :data (select-keys (state :tx-data) [:new-value :path])})
-)
+  (.send @socket (pr-str (select-keys (state :tx-data) [:new-value :path]))))
 
 (let [sub-chan (chan)]
 (defn app-view [app owner opts]
@@ -122,6 +164,7 @@
                       :sync-chan sub-chan
                       :on-error
                       (fn [err tx-data]
+                        (prn "Error:")
                         (reset! app-state (:old-state tx-data))
                         (om/set-state! owner :err-msg
                           "Ooops! Sorry something went wrong try again later."))}})
@@ -134,7 +177,7 @@
   (edn-xhr
     {:method :get
      :url "/data"
-     :on-error (fn [res tx-data] (println res))
+     :on-error (fn [res tx-data] (prn "Error: ")(println res))
      :on-complete
      (fn [res]
        (let [host (aget js/window "location" "hostname")
@@ -143,11 +186,12 @@
             (set! (.-onmessage conn) (fn [e] 
               (.log js/console (read-string (.-data e)))
               (reset! app-state (read-string (.-data e)))))
-            (swap! socket (fn [_] conn))) ; set the socket, so that it can be used for sending things
+            (reset! socket conn)) ; set the socket, so that it can be used for sending things
         (reset! app-state res)
         (om/root app-view app-state
            {:target (. js/document (getElementById "app"))
             :shared {:tx-chan tx-pub-chan}
             :tx-listen
             (fn [tx-data root-cursor]
+                (save-state (:new-state tx-data)) ; to enable the timeline
                 (put! tx-chan [tx-data root-cursor]))}))}))
