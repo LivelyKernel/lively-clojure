@@ -23,27 +23,27 @@
 (def clients (atom {}))
 
 (def app-state 
-   (atom {:url "/data"
+  (atom {:url "/data"
           :server/id 42
           :coll {:id 1
-                :text "Hi!"
-                :morph {:Position {:x 0 :y 42}}
-                :shape {:BorderWidth 5
+                :morph {:id 1 :Position {:x 0 :y 42}}
+                :shape {:id 1
+                        :BorderWidth 5
                         :BorderColor "rgb(0,0,0)"
                         :Fill "rgb(255,255,255)"
                         :Extent {:x 300 :y 300}}
                 :submorphs [{:id 2
-                             :morph {:id 2 :Position {:x 100 :y 100}}
+                             :morph {:Position {:x 100 :y 100} :isDraggable true}
                              :shape {:Fill "rgb(0,0,255)"
                                      :Extent {:x 42 :y 42}}
                              :submorphs []}
                              {:id 3
-                              :morph {:id 3 :Position {:x 100 :y 100}}
+                              :morph {:Position {:x 100 :y 100} :isDraggable true}
                               :shape {:Fill "rgb(250, 250, 0)"
                                       :ShapeClass "Ellipse"
                                       :Extent {:x 100 :y 100}}}
                               {:id 5
-                                :morph {:Position {:x 0 :y 0}}
+                                :morph {:Position {:x 0 :y 0} :isDraggable true}
                                 :shape {:Extent {:x 110 :y 40}
                                         :BorderColor "rgb(92,77, 11)"
                                         :BorderWidth 2
@@ -52,7 +52,8 @@
                                       {:id 4
                                        :morph {:MorphClass "Text" 
                                                :Position {:x 10 :y 10}
-                                               :TextString "Hallo Welt!"}
+                                               :TextString "Hallo Welt!"
+                                               :isDraggable true}
                                        :shape {:ShapeClass "Text"
                                                :Extent {:x 100 :y 30}}}]}]}}))
 
