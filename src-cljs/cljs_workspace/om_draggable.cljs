@@ -39,7 +39,7 @@
         [prev-cursor-x, prev-cursor-y] @prev-cursor-pos
         [delta-x, delta-y] [(- (.-clientX e) prev-cursor-x) (- (.-clientY e) prev-cursor-y)]
         [new-pos-x, new-pos-y] [(+ (old-pos :x) delta-x) (+ (old-pos :y) delta-y)]]
-    (when (= (@app :id) @clicked-morph)
+    (when (and (= (@app :id) @clicked-morph) (get-in @app [:morph :isDraggable]))
       (swap! prev-cursor-pos #(identity [(.-clientX e) (.-clientY e)]))
       (om/update! app [:morph :Position] {:x new-pos-x :y new-pos-y} :update))))
 
