@@ -66,6 +66,45 @@
     (apply dom/div nil
       (om/build-all morph (:submorphs app)))))
 
+; property accessors
+
+(defn find-morph-path
+  ([morph-model id] (find-morph-path morph-model id []))
+  ([morph-model id path]
+    (when-let [submorph (get-in morph-model path)]
+      (if (== id (submorph :id)) 
+        path
+        (if-let [submorphs (submorph :submorphs)]
+          (some #(find-morph-path morph-model id 
+            (concat path [:submorphs %])) (range (count submorphs)))
+          nil)))))
+
+(defn get-prop-path [model id attrPath]
+  (into [] (concat (find-morph-path @model id) attrPath)))
+
+(defn set-position [model id pos]
+  (let [prop-path (get-prop-path model id [:morph :Position])]
+    (swap! model assoc-in prop-path pos)))
+
+(defn add-morph [model id morph]
+  (let [prop-path (get-prop-path model id [:submorphs])
+        submorphs (get-in @model prop-path)]
+    (swap! model assoc-in prop-path (conj submorphs morph))))
+
+(defn remove-morph [model id morph-id]
+  (let [prop-path (get-prop-path model id [:submorphs])
+        submorphs (get-in @model prop-path)]
+    (prn "after removal: " (filter #(not= (% :id) morph-id) submorphs))
+    (swap! model assoc-in prop-path (filter #(not= (% :id) morph-id) submorphs))))
+
+(defn set-fill [model id color]
+  (let [prop-path (get-prop-path model id [:shape :Fill])]
+    (swap! model assoc-in prop-path color)))
+
+(defn set-extent [model id extent]
+  (let [prop-path (get-prop-path model id [:shape :Extent])]
+    (swap! model assoc-in prop-path extent)))
+
 ; multimethod for morph
 
 (defmethod morph "Text" [app owner]
