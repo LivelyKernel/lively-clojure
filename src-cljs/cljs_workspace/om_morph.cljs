@@ -94,8 +94,7 @@
 (defn remove-morph [model id morph-id]
   (let [prop-path (get-prop-path model id [:submorphs])
         submorphs (get-in @model prop-path)]
-    (prn "after removal: " (filter #(not= (% :id) morph-id) submorphs))
-    (swap! model assoc-in prop-path (filter #(not= (% :id) morph-id) submorphs))))
+    (swap! model assoc-in prop-path (into [] (filter #(not= (% :id) morph-id) submorphs)))))
 
 (defn set-fill [model id color]
   (let [prop-path (get-prop-path model id [:shape :Fill])]
