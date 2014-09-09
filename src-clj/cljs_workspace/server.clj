@@ -26,7 +26,7 @@
   (atom {:url "/data"
           :server/id 42
           :coll {:id 1
-                :morph {:id 1 :Position {:x 0 :y 42}}
+                :morph {:id 1 :Position {:x 50 :y 200}}
                 :shape {:id 1
                         :BorderWidth 5
                         :BorderColor "rgb(0,0,0)"
