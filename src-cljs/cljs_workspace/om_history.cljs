@@ -3,7 +3,8 @@
             [om.dom :as dom :include-macros true]
             [cljs-workspace.morph 
               :as morphic 
-              :refer [set-position set-fill set-extent add-morph remove-morph]]))
+              :refer [set-position set-fill set-extent add-morph remove-morph]]
+            [cljs-workspace.branch-vis :refer [render-tree]]))
 
 (enable-console-print!)
 
@@ -18,9 +19,6 @@
 ;; global atom referencing the current state of the app
 (def app-state (atom nil))
 
-;; global atom referencing the total history graph
-(def app-history (atom [@app-state]))
-
 
 (defn init-history [init-state]
   (reset! app-state init-state)
@@ -34,7 +32,10 @@
   @branch-count)
 
 ;; global atom referencing the branch that we currently operate on
-(def current-branch (atom {:id (generate-uuid) :data (atom @app-history)}))
+(def current-branch (atom {:id (generate-uuid) :data (atom [])}))
+
+;; global atom referencing the total history graph
+(def app-history (@current-branch :data))
 
 ;; ffd
 (def history-view)
@@ -50,19 +51,22 @@
 
 (defn nth-history 
   ([i] 
-    (nth-history i @current-branch))
-  ([i {:keys [_ data]}]
+    (nth-history i @(@current-branch :data)))
+  ([i data]
     ;; lookup in unrolled linked list
-    (if (< i (dec (count @data))) 
-      (nth @data i)
-      (when-let [cont ((last @data) :cont)]
-        (nth-history (- i (dec (count @data))) cont)
+    (if (< i (dec (count data))) 
+      (let [e (nth data i)] 
+        (if (e :cont)
+          (first @((e :cont) :data))
+          e))
+      (if-let [cont ((last data) :cont)]
+        (nth-history (- i (dec (count data))) cont)
         nil))))
 
 (defn len [unrolled-list]
   (+ -1 (count unrolled-list) 
     (when-let [end (last unrolled-list)]
-      (when-let [n (end :cont)] (len n)))))
+      (when-let [n @(end :cont)] (len n)))))
 
 (def history-indicator
   {:id "indexMorph"
@@ -124,27 +128,34 @@
 ;
 ; -----\----
 ;       \------
-; [ . . . .  {:cont ---------------------> [ . . . . . ] 
-;             :branch | }]
-;                     \                        
-;                      V                      
-;                      [ . . . . . { . . }]
+; {:id ... :data [ . . . .  {:cont ---------------------> [ . . . . . ] 
+;                            :fork | }]}
+;                                  \                        
+;                                   V                      
+;                                  {:id ... :data [ . . . . . { . . }]}
 
 (defn branch-at [i n]
   (prn "Branching at " i)
   (swap! branch-count inc)
-  (let [index i
+  (let [index (* (dec (len @(@current-branch :data))) (/ i 100))
         new-branch {:id (generate-uuid) :data (atom [])}
         ; split the current branch
         data @(@current-branch :data)
-        [pre-branch post-branch] [(vec (take index data)) (vec (drop index data))]
+        pre-branch (vec (take index data)) 
+        post-branch (vec (drop index data))
         ; insert the branching point into the old branch
-        branched-branch (into [] (concat pre-branch [{:cont post-branch :branch new-branch}]))]
+        branched-branch (conj pre-branch {:cont (atom post-branch) :fork new-branch})]
       ; update the old branch with the inserted version
       (reset! (@current-branch :data) branched-branch)
       ; let current branch pointer point to new branch
       (add-new-branch new-branch)
       (reset! reverted-to -1)))
+
+(defn append-to-branch [branch s]
+  ; in case the branch got forked we have to jump these interruptions
+  (if-let [cont ((last @branch) :cont)]
+    (append-to-branch cont s)
+  (swap! branch conj n)))
 
 (defn save-state [n]
     (cond (> 100 @reverted-to -1 )
@@ -154,8 +165,9 @@
       :else
       (let [b @(@current-branch :data)]
         (when-not (= (last b) n)
-          (swap! (@current-branch :data) conj n))
+          (append-to-branch (@current-branch :data) n)
         (let [c (len @(@current-branch :data))]
+            (render-tree @app-history)
             (prn (str c " Saved " (pluralize c "State")))))))
 
 ; (om/root
