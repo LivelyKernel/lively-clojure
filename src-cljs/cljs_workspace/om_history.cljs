@@ -57,16 +57,16 @@
     (if (< i (dec (count data))) 
       (let [e (nth data i)] 
         (if (e :cont)
-          (first @((e :cont) :data))
+          (first @(e :cont))
           e))
       (if-let [cont ((last data) :cont)]
-        (nth-history (- i (dec (count data))) cont)
+        (nth-history (- i (dec (count data))) @cont)
         nil))))
 
 (defn len [unrolled-list]
   (+ -1 (count unrolled-list) 
     (when-let [end (last unrolled-list)]
-      (when-let [n @(end :cont)] (len n)))))
+      (when-let [n (end :cont)] (len @n)))))
 
 (def history-indicator
   {:id "indexMorph"
@@ -134,28 +134,42 @@
 ;                                   V                      
 ;                                  {:id ... :data [ . . . . . { . . }]}
 
-(defn branch-at [i n]
-  (prn "Branching at " i)
-  (swap! branch-count inc)
-  (let [index (* (dec (len @(@current-branch :data))) (/ i 100))
-        new-branch {:id (generate-uuid) :data (atom [])}
-        ; split the current branch
-        data @(@current-branch :data)
-        pre-branch (vec (take index data)) 
-        post-branch (vec (drop index data))
-        ; insert the branching point into the old branch
-        branched-branch (conj pre-branch {:cont (atom post-branch) :fork new-branch})]
-      ; update the old branch with the inserted version
-      (reset! (@current-branch :data) branched-branch)
-      ; let current branch pointer point to new branch
-      (add-new-branch new-branch)
-      (reset! reverted-to -1)))
+(defn get-branch-part [i branch]
+  (if (< i (dec (count @branch))) 
+      (let [e (nth @branch i)] 
+        (if (e :cont)
+          [0 (e :cont)]
+          [i branch]))
+      (if-let [cont ((last @branch) :cont)]
+        (get-branch-part (- i (dec (count @branch))) cont)
+        (prn "Out of Range!"))))
+
+(defn branch-at 
+  ([i n]
+    (branch-at current-branch i n))
+  ([branch i n] (prn "Branching at " i)
+    (swap! branch-count inc)
+    (let [index (* (dec (len @(@branch :data))) (/ i 100))
+          [rel-index branch-part] (get-branch-part index (@branch :data))
+          new-branch {:id (generate-uuid) :data (atom [])}
+          ; split the current branch
+          pre-branch (vec (take rel-index @branch-part)) 
+          post-branch (vec (drop rel-index @branch-part))
+          ; insert the branching point into the old branch
+          branched-branch (conj pre-branch {:cont (atom post-branch) :fork new-branch})]
+        ; update the old branch with the inserted version
+        (reset! branch-part branched-branch)
+        ; let current branch pointer point to new branch
+        (add-new-branch new-branch)
+        (reset! reverted-to -1))))
 
 (defn append-to-branch [branch s]
   ; in case the branch got forked we have to jump these interruptions
-  (if-let [cont ((last @branch) :cont)]
-    (append-to-branch cont s)
-  (swap! branch conj n)))
+  (if-let [end (last @branch)]
+    (if-let [cont (end :cont)] 
+      (append-to-branch cont s)
+      (swap! branch conj s))
+    (swap! branch conj s)))
 
 (defn save-state [n]
     (cond (> 100 @reverted-to -1 )
@@ -165,16 +179,16 @@
       :else
       (let [b @(@current-branch :data)]
         (when-not (= (last b) n)
-          (append-to-branch (@current-branch :data) n)
+          (append-to-branch (@current-branch :data) n))
         (let [c (len @(@current-branch :data))]
             (render-tree @app-history)
             (prn (str c " Saved " (pluralize c "State")))))))
 
-; (om/root
-;   (fn [app owner]
-;     (om/component 
-;       (dom/div {}
-;         (om/build morphic/morph app)
-;         history-slider)))
-;   history-view 
-;   {:target (. js/document (getElementById "inspector"))})
+(om/root
+  (fn [app owner]
+    (om/component 
+      (dom/div {}
+        (om/build morphic/morph app)
+        history-slider)))
+  history-view 
+  {:target (. js/document (getElementById "inspector"))})
