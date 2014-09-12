@@ -131,11 +131,11 @@
                 (history/save-state (:new-state tx-data)) ; to enable the timeline
                 (put! tx-chan [tx-data root-cursor]))}))}))
 
-(om/root
-  (fn [app owner]
-    (om/component 
-      (dom/div {}
-        (om/build morphic/morph app)
-        history/history-slider)))
-  history/history-view 
-  {:target (. js/document (getElementById "inspector"))})
+; (om/root
+;   (fn [app owner]
+;     (om/component 
+;       (dom/div {}
+;         (om/build morphic/morph app)
+;         history/history-slider)))
+;   history/history-view 
+;   {:target (. js/document (getElementById "inspector"))})
