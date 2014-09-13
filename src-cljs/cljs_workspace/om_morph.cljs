@@ -145,31 +145,44 @@
                   ; :onKeyDown #(when (.-metaKey %) (save-input % owner app))} (dom/span #js {
                     :ref "myInput"} (get-in app [:morph :TextString])))
 
+(defn handle-path-element [e]
+  (case (e :type)
+    :arc (let [[a b c] (e :anchors)] 
+            (str "C" (a :x) "," (a :y) " " (b :x) "," (b :y) " " (c :x) "," (c :y) " "))
+    (str "L" (e :x) "," (e :y) " ")))
+
 (defn to-svg-attr [elements]
   (let [car (first elements)
         cdr (rest elements)]
     (str "M" (car :x) "," (car :y) " "
-      (reduce str (map #(str "L" (% :x) "," (% :y) " ") cdr)))))
+      (reduce str (map handle-path-element cdr)))))
+
+(defn unpack [e]
+  (case (e :type)
+    :arc (e :anchors)
+    e))
 
 (defn render-path-node [app owner]
-  (let [vertices (get-in app [:shape :PathElements])
-        ulx (apply min (map #(% :x) vertices))
-        uly (apply min (map #(% :y) vertices))
-        lrx (apply max (map #(% :x) vertices))
-        lry (apply max (map #(% :y) vertices))
+  (prn (flatten (map unpack (get-in app [:shape :PathElements]))))
+  (let [vertices (flatten (map unpack (get-in app [:shape :PathElements])))
+        minX (apply min (map #(% :x) vertices))
+        minY (apply min (map #(% :y) vertices))
+        maxX (apply max (map #(% :x) vertices))
+        maxY (apply max (map #(% :y) vertices))
         half-stroke (/ (get-in app [:shape :StrokeWidth]) 2)
-        w (Math/abs (- ulx lrx))
-        h (Math/abs (- uly lry))]
+        w (Math/abs (- minX maxX))
+        h (Math/abs (- minY maxY))]
   (dom/svg #js { :style #js {:position "absolute" 
-                             :width (+ w (* 2 half-stroke)) 
-                             :height (+ h (* 2 half-stroke)) 
-                             :fill "none" 
-                             :viewBox [(unchecked-negate half-stroke) 
-                                       (unchecked-negate half-stroke) 
-                                       (+ w half-stroke) (+ h half-stroke)] }}
+                             :fill "none" }
+                  :width (+ 1 w (* 2 half-stroke)) 
+                  :height (+ 1 h (* 2 half-stroke))
+                    :viewBox (str (- minX 1 half-stroke) " "
+                                  (- minY 1 half-stroke) " "
+                                  (+ maxX (* 2 half-stroke)) " "
+                                  (+ maxY (* 2 half-stroke)))}
     (dom/path #js {:strokeWidth (get-in app [:shape :StrokeWidth]) 
                    :stroke (get-in app [:shape :Fill]) 
-                   :d (to-svg-attr vertices)}))))
+                   :d (to-svg-attr (get-in app [:shape :PathElements]))}))))
 
 (defmethod shape "Path" [app owner]
   (let [style (extract-style (:shape app))]
