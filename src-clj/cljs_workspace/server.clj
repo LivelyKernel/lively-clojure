@@ -51,11 +51,11 @@
                                 :submorphs [
                                       {:id 4
                                        :morph {:MorphClass "Text" 
-                                               :Position {:x 10 :y 10}
-                                               :TextString "Hallo Welt!"
+                                               :Position {:x 200 :y 10}
+                                               :TextString "Hallo Welt! Write something!"
                                                :isDraggable true}
                                        :shape {:ShapeClass "Text"
-                                               :Extent {:x 100 :y 30}}}]}]}}))
+                                               :Extent {:x 200 :y 400}}}]}]}}))
 
 (defn set-app-state [params origin]
   (prn origin)
