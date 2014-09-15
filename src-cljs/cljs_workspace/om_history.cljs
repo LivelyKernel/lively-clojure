@@ -22,8 +22,7 @@
 
 (defn init-history [init-state]
   (reset! app-state init-state)
-  (reset! app-history [init-state])
-  (reset! (@current-branch :data) @app-history)
+  (reset! (@current-branch :data) @(@app-history :data))
   (add-morph history-view (@current-branch :id) history-indicator))
 
 (def branch-count (atom 1))
@@ -35,10 +34,14 @@
 (def current-branch (atom {:id (generate-uuid) :data (atom [])}))
 
 ;; global atom referencing the total history graph
-(def app-history (@current-branch :data))
+(def app-history (atom {:root @current-branch :data (@current-branch :data)}))
 
 ;; ffd
 (def history-view)
+
+(defn most-recent-state []
+  (let [l (len @(@current-branch :data))]
+        (when (> l 0) (nth-history (- l 2)))))
 
 (defn switch-to-branch [branch]
   (prn "old branch id: " (@current-branch :id))
@@ -47,7 +50,10 @@
   (set-fill history-view (@current-branch :id) "lightgrey")
   (set-fill history-view (branch :id) "green")
   (add-morph history-view (branch :id) history-indicator)
-  (reset! current-branch branch))
+  (reset! current-branch branch)
+  (when-let [s (most-recent-state)]
+    (reset! app-state s))
+  (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch))))
 
 (defn nth-history 
   ([i] 
@@ -57,16 +63,16 @@
     (if (< i (dec (count data))) 
       (let [e (nth data i)] 
         (if (e :cont)
-          (first @(e :cont))
+          (first @(get-in e [:cont :data]))
           e))
-      (if-let [cont ((last data) :cont)]
+      (if-let [cont (get-in (last data) [:cont :data])]
         (nth-history (- i (dec (count data))) @cont)
         nil))))
 
 (defn len [unrolled-list]
   (+ -1 (count unrolled-list) 
     (when-let [end (last unrolled-list)]
-      (when-let [n (end :cont)] (len @n)))))
+      (when-let [n (get-in end [:cont :data])] (len @n)))))
 
 (def history-indicator
   {:id "indexMorph"
@@ -128,7 +134,7 @@
 ;
 ; -----\----
 ;       \------
-; {:id ... :data [ . . . .  {:cont ---------------------> [ . . . . . ] 
+; {:id ... :data [ . . . .  {:cont ---------------------> {:root . :data [ . . . . . ] }
 ;                            :fork | }]}
 ;                                  \                        
 ;                                   V                      
@@ -138,9 +144,9 @@
   (if (< i (dec (count @branch))) 
       (let [e (nth @branch i)] 
         (if (e :cont)
-          [0 (e :cont)]
+          [0 (get-in e [:cont :data])]
           [i branch]))
-      (if-let [cont ((last @branch) :cont)]
+      (if-let [cont (get-in (last @branch) [:cont :data])]
         (get-branch-part (- i (dec (count @branch))) cont)
         (prn "Out of Range!"))))
 
@@ -156,7 +162,7 @@
           pre-branch (vec (take rel-index @branch-part)) 
           post-branch (vec (drop rel-index @branch-part))
           ; insert the branching point into the old branch
-          branched-branch (conj pre-branch {:cont (atom post-branch) :fork new-branch})]
+          branched-branch (conj pre-branch {:cont {:root @branch :data (atom post-branch)} :fork new-branch})]
         ; update the old branch with the inserted version
         (reset! branch-part branched-branch)
         ; let current branch pointer point to new branch
@@ -166,7 +172,7 @@
 (defn append-to-branch [branch s]
   ; in case the branch got forked we have to jump these interruptions
   (if-let [end (last @branch)]
-    (if-let [cont (end :cont)] 
+    (if-let [cont (get-in end [:cont :data])] 
       (append-to-branch cont s)
       (swap! branch conj s))
     (swap! branch conj s)))
@@ -181,14 +187,13 @@
         (when-not (= (last b) n)
           (append-to-branch (@current-branch :data) n))
         (let [c (len @(@current-branch :data))]
-            (render-tree @app-history)
+            (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch)))
             (prn (str c " Saved " (pluralize c "State")))))))
 
 (om/root
   (fn [app owner]
     (om/component 
       (dom/div {}
-        (om/build morphic/morph app)
         history-slider)))
   history-view 
   {:target (. js/document (getElementById "inspector"))})
