@@ -121,7 +121,7 @@
       (let [style (dict->js (extract-style (:morph app)))]
         (dom/div  #js {:style style
                      :className "morphNode"
-                     :onClick #(when-let [cb (get-in @app [:morph :onClick])] (cb %))
+                     :onClick #(when-let [cb (get-in @app [:morph :onClick])] (cb (@app :morph)))
                      :onMouseDown #(draggable/start-dragging % app owner)
                      :onMouseUp #(draggable/stop-dragging % app)
                     } 
