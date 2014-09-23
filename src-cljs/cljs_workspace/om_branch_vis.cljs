@@ -66,7 +66,7 @@
     (let [branch-part (root next-step)]
       (do 
         (swap! highlighted-branches assoc (hash branch-part) true)
-        (if (and (= 1 (count path)) (= :cont next-step))
+        (if (= 1 (count path))
           (let [fp? (last @(branch-part :data))]
             (if (contains? fp? :cont)
               (highlight-branch fp? [:cont])))))
@@ -227,8 +227,8 @@
            :BorderColor "darkgrey"
            :Fill "lightgrey"}
    :submorphs [{:morph {:MorphClass "Text"
-                        :TextString "Merge?"
-                        :Locked true}
+                        :AllowInput false
+                        :TextString "Merge?"}
                 :shape {:ShapeClass "Text"}}]})
 
 (def branch-view (atom
