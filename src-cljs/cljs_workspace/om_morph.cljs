@@ -8,6 +8,7 @@
             [goog.style :as gstyle]
             [goog.dom :as gdom]
             [cljs-workspace.draggable :as draggable :refer [clicked-morph]]
+            [cljs-workspace.branch-merge :as branch-merge]
             ; [clojure.browser.repl :as repl]
             )
   (:import [goog.events EventType]))
@@ -114,6 +115,13 @@
         (dom/div  #js {:style style
                      :className "morphNode" } (shape app owner))))))
 
+(defn handle-click [e state]
+  ; add/remove morph from preserve list
+  ; (branch-merge/toggle-preserve state)
+  ; handle the custom behavior
+  (when-let [cb (get-in state [:morph :onClick])] 
+              (cb state)))
+
 (defmethod morph :default [app owner]
   (reify
     om/IRender
@@ -121,7 +129,7 @@
       (let [style (dict->js (extract-style (:morph app)))]
         (dom/div  #js {:style style
                      :className "morphNode"
-                     :onClick #(when-let [cb (get-in @app [:morph :onClick])] (cb (@app :morph)))
+                     :onClick #(handle-click % @app)
                      :onMouseDown #(draggable/start-dragging % app owner)
                      :onMouseUp #(draggable/stop-dragging % app)
                     } 
