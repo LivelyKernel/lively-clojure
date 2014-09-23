@@ -34,10 +34,14 @@
 (def current-branch (atom {:id (generate-uuid) :data (atom [])}))
 
 ;; global atom referencing the total history graph
-(def app-history (atom {:root @current-branch :data (@current-branch :data)}))
+(def app-history (atom {:id 1 :root @current-branch :data (@current-branch :data)}))
 
 ;; ffd
 (def history-view)
+
+;; this variable indicates that we are currently reverted to an earlier
+;; state of the branch and also which one we have reverted to
+(def reverted-to (atom -1))
 
 (defn most-recent-state []
   (let [l (len @(@current-branch :data))]
@@ -53,7 +57,7 @@
   (reset! current-branch branch)
   (when-let [s (most-recent-state)]
     (reset! app-state s))
-  (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch))))
+  (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch)) (* (len @(branch :data)) (/ index 100))))
 
 (defn nth-history 
   ([i] 
@@ -83,7 +87,7 @@
 (defn branch-morph [posX posY width height branch]
          {:id (branch :id)
           :morph {:Position {:x posX :y posY}
-                  :onClick (fn [e] (switch-to-branch branch))}
+                  :onClick (fn [this] (switch-to-branch branch))}
           :shape {:Fill "green"
                   :BorderColor "darkgreen"
                   :Extent {:x width :y height}}
@@ -105,10 +109,6 @@
 (defn move-indicator-to [index]
   (set-position history-view "indexMorph" {:x (* diagram-width (/ index 100)) :y 3}))
 
-;; this variable indicates that we are currently reverted to an earlier
-;; state of the branch and also which one we have reverted to
-(def reverted-to (atom -1))
-
 (defn revert-to [i]
   (prn "request revert: " i)
   (let [index (* (dec (len @(@current-branch :data))) (/ i 100))]
@@ -116,7 +116,9 @@
       (prn "revert to: " index)
       (reset! app-state state)
       (reset! reverted-to i)
-      (move-indicator-to i))))
+      (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch)) index)
+;      (move-indicator-to i)
+)))
 
 (defn add-new-branch [branch]
     (let [new-branch-morph (branch-morph 
@@ -186,8 +188,8 @@
       (let [b @(@current-branch :data)]
         (when-not (= (last b) n)
           (append-to-branch (@current-branch :data) n))
-        (let [c (len @(@current-branch :data))]
-            (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch)))
+        (let [c (len b)]
+            (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch)) (* c (/ index 100)))
             (prn (str c " Saved " (pluralize c "State")))))))
 
 (om/root
