@@ -10,7 +10,7 @@
   :source-paths ["src-clj"]
     
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2277"]
+                 [org.clojure/clojurescript "0.0-2342"]
                  [http-kit "2.1.16"]
                  [compojure "1.1.5"]
                  [ring "1.3.1"]
@@ -18,7 +18,10 @@
                  [om "0.6.5"]
                  [org.clojure/core.async "0.1.303.0-886421-alpha"]
                  [cljs-tooling "0.1.3"]
-                 [om-sync "0.1.1"]]
+                 [om-sync "0.1.1"]
+                 [com.cemerick/piggieback "0.1.3"]]
+
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :cljsbuild {:builds [{:id "om-test"
                         :source-paths ["src-cljs"]
