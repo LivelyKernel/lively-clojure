@@ -11,7 +11,7 @@
             [om-sync.util :refer [tx-tag edn-xhr]]
             [cljs-workspace.morph :as morphic]
             [cljs-workspace.history :as history :refer [app-state init-history]]
-            )
+            [cljs-workspace.repl :as repl])
   (:import [goog.events EventType]))
 
 (enable-console-print!)
