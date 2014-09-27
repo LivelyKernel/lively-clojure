@@ -188,7 +188,7 @@
 
 (defn create-text-node [app owner]
     (dom/div #js {:className "visible Selection"
-                  :contentEditable true
+                  :contentEditable (nil? (get-in app [:morph :AllowInput]))
                   :onMouseDown #(swap! clicked-morph (fn [_] @app :id))
                   :onInput #(handle-input % owner app)
                   ; :onKeyDown #(when (.-metaKey %) (save-input % owner app))} (dom/span #js {
@@ -250,9 +250,10 @@
 
 (defmethod shape "Text" [app owner]
   (prn "Rendering Text Shape")
-  (let [style (dict->js (extract-style (:shape app)))]
-    (dom/div #js {:style style
-                  :className "Morph Text"} (create-text-node app owner))))
+  (let [style (extract-style (:shape app))]
+    (let [text-style (assoc style "cursor" "default")]
+      (dom/div #js {:style (dict->js text-style)
+                    :className "Morph Text"} (create-text-node app owner)))))
 
 (defmethod shape :default [app owner]
   (let [style (extract-style (:shape app))]
