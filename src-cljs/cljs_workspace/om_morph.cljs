@@ -15,6 +15,18 @@
 
 (enable-console-print!)
 
+(def right-click-behavior (atom (fn [e state] (prn "No Right Click Behavior!"))))
+
+(def right-click-event (atom nil))
+
+(defn not-yet-handled [event]
+  (if (= @right-click-event (.-timeStamp event))
+    false
+    (do
+      (reset! right-click-event (.-timeStamp event))
+      (prn (.-timeStamp event) " ... was not yet handled!")
+      true)))
+
 ; morph property to CSS property translators
 
 (defn get-fill [value]
