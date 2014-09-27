@@ -120,6 +120,19 @@
   (let [prop-path (get-prop-path model id [:shape :Extent])]
     (swap! model assoc-in prop-path extent)))
 
+(defn set-border-color [model id fill]
+  (let [prop-path (get-prop-path model id [:shape :BorderColor])]
+    (swap! model assoc-in prop-path fill)))
+
+(defn toggle-halo [model id]
+  (let [prop-path (get-prop-path model id [:morph :Halo])]
+    (prn prop-path " before:" (get-in @model prop-path))
+    (swap! model (fn [m] 
+                    (if (get-in m prop-path)
+                      (assoc-in m prop-path false)
+                      (assoc-in m prop-path true))))
+    (prn prop-path "Halo value after:" (get-in @model prop-path))))
+
 ; multimethod for morph
 
 (defmethod morph "Text" [app owner]
@@ -128,27 +141,40 @@
     (render [this]
       (let [style (dict->js (extract-style (:morph app)))]
         (dom/div  #js {:style style
-                     :className "morphNode" } (shape app owner))))))
+                       :className "morphNode" } (shape app owner))))))
 
 (defn handle-click [e state]
   ; add/remove morph from preserve list
   ; (branch-merge/toggle-preserve state)
   ; handle the custom behavior
+  (when (and (not-yet-handled e) (.-altKey e))
+    (@right-click-behavior e state))
   (when-let [cb (get-in state [:morph :onClick])] 
               (cb state)))
+
+; render based on ad hoc definition of morph like frame
+; to visualize the halo
+(defn render-halo [app owner]
+  (let [css {:Extent (get-in app [:shape :Extent])
+             :BorderWidth 1
+             :Position {:x 0 :y 0}
+             :BorderColor "red"}]
+    (dom/div #js {:style (dict->js (extract-style css))})))
 
 (defmethod morph :default [app owner]
   (reify
     om/IRender
     (render [this]
-      (let [style (dict->js (extract-style (:morph app)))]
-        (dom/div  #js {:style style
-                     :className "morphNode"
-                     :onClick #(handle-click % @app)
-                     :onMouseDown #(draggable/start-dragging % app owner)
-                     :onMouseUp #(draggable/stop-dragging % app)
-                    } 
-                 (shape app owner))))))
+        (let [style (dict->js (extract-style (:morph app)))]
+          (dom/div  #js {:style style
+                       :className "morphNode"
+                       :onClick #(handle-click % @app)
+                       :onMouseDown #(draggable/start-dragging % app owner)
+                       :onMouseUp #(draggable/stop-dragging % app)
+                      } 
+                   (when (get-in app [:morph :Halo])
+                      (render-halo app owner))
+                   (shape app owner))))))
 
 ;; multi method for shape
 (defn handle-input [e owner app]
