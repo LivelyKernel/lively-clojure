@@ -103,9 +103,7 @@
                           (let [[fp pa pb] (branch-merge/fork-point a b @rendered-tree)]
                             (visualize-merge-candidates fp pa pb))))
                       (let [fill (if (= (get-in this [:shape :Fill]) "red") 
-                                    (do
-                                      ; (remove-morph branch-view (this :id) (str "box-" (this :id)))
-                                      "green")
+                                    "green"
                                     (let [textfield { :id (str "box-" (this :id))
                                                       :morph {:Position {:x 15 :y -3} 
                                                              :MorphClass "Text" 
@@ -220,14 +218,16 @@
   {:id "mergeButton"
    :morph {:Position {:x 400 :y 100}
            :onClick (fn [this]
+                      (branch-merge/merge-staged-branches @rendered-tree)
                       (reset! highlighted-branches {})
                       (refresh-view))}
                       ;(branch-merge/merge-staged-branches @rendered-tree))}
-   :shape {:Extent {:x 60 :y 15}
+   :shape {:Extent {:x 55 :y 20}
            :BorderColor "darkgrey"
            :Fill "lightgrey"}
    :submorphs [{:morph {:MorphClass "Text"
                         :AllowInput false
+                        :Position {:x 5 :y 5}
                         :TextString "Merge?"}
                 :shape {:ShapeClass "Text"}}]})
 
