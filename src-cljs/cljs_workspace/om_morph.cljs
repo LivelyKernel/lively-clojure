@@ -69,7 +69,7 @@
 
 ; morph component + rendering functions
 
-(defmulti shape (fn [app owner] (get-in app  [:shape :ShapeClass])))
+(defmulti shape (fn [app owner] (get-in app [:shape :ShapeClass])))
 (defmulti morph (fn [app owner] (get-in app [:morph :MorphClass])))
 
 ; utilities
@@ -82,7 +82,10 @@
 ; property accessors
 
 (defn find-morph-path
-  ([morph-model id] (find-morph-path morph-model id []))
+  ([morph-model id] 
+    (if (contains? morph-model :coll) ; this is a hack to work with om-sync applied
+      (into [:coll] (find-morph-path (morph-model :coll) id []))
+      (into [] (find-morph-path morph-model id []))))
   ([morph-model id path]
     (when-let [submorph (get-in morph-model path)]
       (if (== id (submorph :id)) 
@@ -93,7 +96,7 @@
           nil)))))
 
 (defn get-prop-path [model id attrPath]
-  (into [] (concat (find-morph-path @model id) attrPath)))
+    (into [] (concat (find-morph-path @model id) attrPath)))
 
 (defn set-position [model id pos]
   (let [prop-path (get-prop-path model id [:morph :Position])]
