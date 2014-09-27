@@ -9,14 +9,24 @@
             [goog.style :as gstyle]
             [om-sync.core :refer [om-sync]]
             [om-sync.util :refer [tx-tag edn-xhr]]
-            [cljs-workspace.morph :as morphic]
+            [cljs-workspace.morph :as morphic :refer [set-fill toggle-halo find-morph-path]]
             [cljs-workspace.history :as history :refer [app-state init-history]]
             [cljs-workspace.repl :as repl])
+            [cljs-workspace.branch-merge :as branch-merge])
   (:import [goog.events EventType]))
 
 (enable-console-print!)
 
-(println "Hello :)")
+; Initialize modules
+
+(reset! morphic/right-click-behavior 
+  (fn [e state]
+    (branch-merge/toggle-preserve (find-morph-path @app-state (state :id)))
+    ; now also highlight all the morphs that are being preserved
+    ; without changing the state
+    (toggle-halo app-state (state :id))))
+
+(prn @morphic/right-click-behavior)
 
 (init-history 
          {:url "/data"
@@ -46,7 +56,8 @@
                                         :Fill "rgb(255,244,194)"}
                                 :submorphs [
                                       {:id 4
-                                       :morph {:MorphClass "Text" 
+                                       :morph {:Preserve true
+                                               :MorphClass "Text" 
                                                :Position {:x 10 :y 10}
                                                :TextString "Hallo Welt!"
                                                :isDraggable true}
