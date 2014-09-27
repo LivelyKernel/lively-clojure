@@ -6,7 +6,7 @@
 (def merge-candidate (atom nil))
 (def staged-for-merge (atom {:from nil :into nil}))
 
-(defn merge-state [remote-state local-state]
+(defn merge-state [local-state remote-state]
     (let [merged (merge local-state remote-state)]
       ; recover the old values, that ar on the exclude list and return
       (reduce 
@@ -48,37 +48,42 @@
     res
     [root-branch [] []])) ; find the path to branch from root
 
-(defn extract-branch [start-fp path] 
-  (into [] (reduce (fn [[flattened fork] next-attr]
-                        (let [data @(get-in fork :next-attr :data)]
-                            [(concat flattened data) (last data)]))
-                    [[] start-fp]
-                    path)))
+(defn extract-branch [start-fp path]
+    (if (empty? path)
+      (if (contains? start-fp :cont)
+        (extract-branch start-fp [:cont])
+        [])
+      (let [next-attr (first path)
+            data @(get-in start-fp [next-attr :data])]
+          (into [] (concat (butlast data) (extract-branch (last data) (rest path)))))))
+
+(defn merge-streams [s1 s2]
+  (map merge-state (concat s1 (repeat (last s1))) s2))
 
 (defn merge-from-flattened [branch flat-data]
-  (let [local-data @(branch :data)]
-    (if (< (count local-data) (count flat-data))
-        ; we need to either continue merging after a branching point
-        ; or append new merged entries to our local-branch
-        (if-let [last-entry (last local-data)]
-            (if (contains? last-entry :cont) 
-                ; we have to now continue merging into BOTH forking branches, as we are NOT stroing diffs
-                (let [merged-part (map merge-state (butlast local-data) flat-data) 
-                      cont (merge-from-flattened (last-entry :cont) (take (count local-data) flat-data))
-                      fork (merge-from-flattened (last-entry :fork) (take (count local-data) flat-data))]
-                    (conj merged-part {:cont {root: (last-entry :root) :data (atom cont)} 
-                                       :fork {root: (last-entry :root) :data (atom fork)}}))
-                ; we reached the end of the branch and just append additional states to the branch
-                ; that are all merges with the last state in the branch
-                (map merge-state (concat local-data (repeat last-entry)) (flat-data)))
-            ; this is a weird case and the branch part we have to merge into
-            ; is actually a stub and contains no entries. In that case we just
-            ; append merged versions with the previous last entry to until the flattened
-            ; data is used up. But this is so weird, we can just aswell return the flat-data
-            (map merge-state (repeat {}) flat-data))
-        ; if not we have fewer entries to be merged into, we continue
-        ; merging the last state into all other proceeding local states
-        (conj (map merge-state (butlast local-data) (concat flat-data (repeat (last flat-data)))) (last local-data)))))
+  (let [local-data @(branch :data)
+        flat-data (if (> (count local-data) (count flat-data)) 
+                      (into [] (concat flat-data (repeat (- (count local-data) (count flat-data)) (last flat-data))))
+                      flat-data)
+        result
+            (if-let [last-entry (last local-data)]
+                (if (contains? last-entry :cont) 
+                    ; we have to now continue merging into BOTH forking branches, as we are NOT stroing diffs
+                    (let [merged-part (into [] (map merge-state (butlast local-data) flat-data))
+                          cont (merge-from-flattened (last-entry :cont) (drop (count local-data) flat-data))
+                          fork (merge-from-flattened (last-entry :fork) (drop (count local-data) flat-data))]
+                        (conj merged-part {:cont {:root (get-in last-entry [:cont :root]) :data (atom cont)} 
+                                           :fork {:id (get-in last-entry [:fork :id]) :data (atom fork)}}))
+                    ; we reached the end of the branch and just append additional states to the branch
+                    ; that are all merges with the last state in the branch
+                    (merge-streams local-data flat-data))
+                ; this is a weird case and the branch part we have to merge into
+                ; is actually a stub and contains no entries. In that case we just
+                ; append merged versions with the previous last entry to until the flattened
+                ; data is used up. But this is so weird, we can just aswell return the flat-data
+                (map merge-state (repeat {}) flat-data))
+          ]
+      (into [] result)))
 
 (defn merge-branches [remote-branch local-branch root-branch]
   (prn "Merging Branch " (remote-branch :id) " into " (local-branch :id))
@@ -86,28 +91,26 @@
          ; we first flatten the remote branch such that it appears to be one continuous
          ; vector of states, which makes it easier to perform the merge into our local branch
          remote (extract-branch fp remote-path)
-         merged-branch (merge-from-flattened local-branch remote)]
-      (prn "merged branch of len " (count local) " and " (count remote) " into size " (len merged-branch)) 
-      (reset! (into-branch :data) merged-branch) ; maybe clean up the remote branch that got included?
+         local (fp (first local-path)) ; we have to merge into all the subbranches anyway so we dont care for the rest path
+         merged-branch (merge-from-flattened local remote)]
+      (reset! (local :data) merged-branch) ; maybe clean up the remote branch that got included?
       ))
 
 (defn select-for-merge [branch cbk]
   ; if we select the same twice, we deselect
-  (prn "select for marge: " cbk)
+  (prn "select for merge: " cbk)
   (if (= @merge-candidate branch)
       (reset! merge-candidate nil)
       (if @merge-candidate 
-          (if cbk 
-            (do 
-              (reset! staged-for-merge {:from @merge-candidate :into branch})
-              (cbk @merge-candidate branch)
-              (reset! merge-candidate nil))
-            (merge-branch @merge-candidate branch)) ; perform merge immediately if not callback defined
-          (reset! merge-candidate branch))))
+        (do 
+          (reset! staged-for-merge {:from @merge-candidate :into branch})
+          (cbk @merge-candidate branch)
+          (reset! merge-candidate nil))
+        (reset! merge-candidate branch))))
 
 (defn merge-staged-branches [root-branch]
-  (let [[a b] @staged-for-merge]
-    (merge-branches a b root-branch)))
+  (let [{:keys [from into]} @staged-for-merge]
+    (merge-branches from into root-branch)))
 
 (defn toggle-preserve [morph-path]
   (if (contains? @preserve-list morph-path) 
