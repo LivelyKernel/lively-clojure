@@ -22,7 +22,18 @@
 
 (def clients (atom {}))
 
-(def app-state 
+(def app-state-old
+  (atom {:url "/data"
+          :server/id 42
+          :coll {:id 4
+                                       :morph {:MorphClass "Text" 
+                                               :Position {:x 200 :y 200}
+                                               :TextString "Hallo Welt! Write something!"
+                                               :isDraggable true}
+                                       :shape {:ShapeClass "Text"
+                                               :Extent {:x 200 :y 400}}}}))
+
+(def app-state
   (atom {:url "/data"
           :server/id 42
           :coll {:id 1
@@ -50,7 +61,8 @@
                                         :Fill "rgb(255,244,194)"}
                                 :submorphs [
                                       {:id 4
-                                       :morph {:MorphClass "Text" 
+                                       :morph {:Preserve true
+                                               :MorphClass "Text" 
                                                :Position {:x 200 :y 10}
                                                :TextString "Hallo Welt! Write something!"
                                                :isDraggable true}
