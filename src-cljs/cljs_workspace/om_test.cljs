@@ -11,7 +11,7 @@
             [om-sync.util :refer [tx-tag edn-xhr]]
             [cljs-workspace.morph :as morphic :refer [set-fill toggle-halo find-morph-path]]
             [cljs-workspace.history :as history :refer [app-state init-history]]
-            [cljs-workspace.repl :as repl])
+            [cljs-workspace.repl :as repl]
             [cljs-workspace.branch-merge :as branch-merge])
   (:import [goog.events EventType]))
 
