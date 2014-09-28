@@ -233,6 +233,12 @@
                    :stroke (get-in app [:shape :Fill]) 
                    :d (to-svg-attr (get-in app [:shape :PathElements]))}))))
 
+(defmethod shape "Image" [app owner]
+  (let [style (dict->js (extract-style (:shape app)))]
+    (dom/img #js {:style style
+                  :draggable false
+                  :src (get-in app [:shape :url])})))
+
 (defmethod shape "Path" [app owner]
   (let [style (extract-style (:shape app))]
       (dom/div #js {:style (dict->js style) :className "Morph Path"} 
