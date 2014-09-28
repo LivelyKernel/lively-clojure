@@ -4,6 +4,7 @@
 (enable-console-print!)
 
 (def port 9050)
+(def host (.. js/document -location -hostname))
 
-(repl/connect (str "http://localhost:" port "/repl"))
-(print (str "repl connected on port " port))
+(repl/connect (str "http://" host ":" port "/repl"))
+(println "repl connected on port " port)
