@@ -10,9 +10,10 @@
             [om-sync.core :refer [om-sync]]
             [om-sync.util :refer [tx-tag edn-xhr]]
             [cljs-workspace.morph :as morphic :refer [set-fill toggle-halo find-morph-path]]
-            [cljs-workspace.history :as history :refer [app-state init-history]]
-            [cljs-workspace.repl :as repl]
-            [cljs-workspace.branch-merge :as branch-merge])
+            [cljs-workspace.history :as history :refer [app-state init-history current-branch]]
+            [cljs-workspace.branch-merge :as branch-merge]
+            [cljs-workspace.branch-vis :refer [is-master]]
+            [cljs-workspace.repl :as repl])
   (:import [goog.events EventType]))
 
 (enable-console-print!)
@@ -88,6 +89,7 @@
 ;   {:target (. js/document (getElementById "inspector"))})
 
 (defn send-update [state]
+  (prn "Sending update!")
   (.send @socket (pr-str (select-keys (state :tx-data) [:new-value :path]))))
 
 (let [sub-chan (chan)]
@@ -130,8 +132,9 @@
              conn (js/WebSocket. (str "ws://" host ":" port "/ws"))]
             (set! (.-onmessage conn) (fn [e] 
               (when-let [state (read-string (.-data e))]
-                (.log js/console state)
-                (reset! app-state state))))
+                (.log js/console e)
+                (history/save-to-master state)
+                (when (is-master @current-branch) (reset! app-state state)))))
             (reset! socket conn)) ; set the socket, so that it can be used for sending things
         (when-not (nil? res) (reset! app-state res))
         (om/root app-view app-state
@@ -140,7 +143,7 @@
             :tx-listen
             (fn [tx-data root-cursor]
                 (history/save-state (:new-state tx-data)) ; to enable the timeline
-                (put! tx-chan [tx-data root-cursor]))}))}))
+                (when (is-master @current-branch) (put! tx-chan [tx-data root-cursor])))}))}))
 
 ; (om/root
 ;   (fn [app owner]
