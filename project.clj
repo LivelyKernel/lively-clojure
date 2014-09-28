@@ -5,7 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
-  :hooks [leiningen.cljsbuild]
 
   :source-paths ["src-clj"]
     
