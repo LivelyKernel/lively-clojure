@@ -108,6 +108,10 @@
           (reset! merge-candidate nil))
         (reset! merge-candidate branch))))
 
+(defn unstage-branches []
+  (reset! merge-candidate nil)
+  (reset! staged-for-merge (atom {:from nil :into nil})))
+
 (defn merge-staged-branches [root-branch]
   (let [{:keys [from into]} @staged-for-merge]
     (merge-branches from into root-branch)))
