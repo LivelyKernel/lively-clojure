@@ -53,11 +53,15 @@
             (= @current-branch-ref (branch :root))))
     false))
 
+(defn is-master [branch]
+  (or (= "Master" (get branch :id))
+      (= "Master" (get-in branch [:root :id]))))
+
 (defn get-coloring [branch]
-  (prn "HIGHLIGHTED: " @highlighted-branches)
   (if (contains? @highlighted-branches (hash branch))
     "red"
-    (if (is-on-current branch) "green" "black")))
+    (if (is-on-current branch) "green"
+      (if (is-master branch) "blue" "black"))))
 
 (defn scale-branch-model [model max-width] model)
 
@@ -88,7 +92,7 @@
                         false)}
     :shape {:ShapeClass "Path"
             :StrokeWidth 5
-            :Fill (if (is-on-current branch) "green" "black")
+            :Fill (get-coloring branch)
             :PathElements [{:x 0 :y 0}]}
             :submorphs []},
             20])
@@ -103,7 +107,9 @@
                           (let [[fp pa pb] (branch-merge/fork-point a b @rendered-tree)]
                             (visualize-merge-candidates fp pa pb))))
                       (let [fill (if (= (get-in this [:shape :Fill]) "red") 
-                                    "green"
+                                    (do 
+                                      (remove-morph branch-view (this :id) (str "box-" (this :id)))
+                                      (get-coloring branch))
                                     (let [textfield { :id (str "box-" (this :id))
                                                       :morph {:Position {:x 15 :y -3} 
                                                              :MorphClass "Text" 
@@ -198,9 +204,41 @@
                   (is-on-current branch) 
                   (> @reverted-index 0)) (attach-marker bm branch) bm) sp])))
 
+(def merge-button 
+  {:id "mergeButton"
+   :morph {:Position {:x 400 :y 100}
+           :onClick (fn [this]
+                      (branch-merge/merge-staged-branches @rendered-tree)
+                      (reset! highlighted-branches {})
+                      (refresh-view))}
+   :shape {:Extent {:x 55 :y 20}
+           :BorderColor "darkgrey"
+           :Fill "lightgrey"}
+   :submorphs [{:morph {:MorphClass "Text"
+                        :AllowInput false
+                        :Position {:x 5 :y 5}
+                        :TextString "Merge"}
+                :shape {:ShapeClass "Text"}}]})
+
+(def cancel-button
+  {:id "cancelButton"
+  :morph {:Position {:x 470 :y 100}
+           :onClick (fn [this]
+                      (branch-merge/unstage-branches)
+                      (reset! highlighted-branches {})
+                      (refresh-view))}
+   :shape {:Extent {:x 55 :y 20}
+           :BorderColor "darkgrey"
+           :Fill "lightgrey"}
+   :submorphs [{:morph {:MorphClass "Text"
+                        :AllowInput false
+                        :Position {:x 5 :y 5}
+                        :TextString "Cancel"}
+                :shape {:ShapeClass "Text"}}]})
+
 (defn refresh-view []
   (let [[model _] (render-branch @rendered-tree)]
-      (swap! branch-view assoc :submorphs [merge-button (scale-branch-model model 400)])))
+      (swap! branch-view assoc :submorphs [merge-button cancel-button (scale-branch-model model 400)])))
 
 (defn render-tree [tree branch branch-callback reverted]
   ; idea, walk to the leaves of the tree, and then start traversing
@@ -211,31 +249,13 @@
   (reset! current-branch-ref branch)
   (reset! branch-callback-fn branch-callback)
   (reset! reverted-index reverted)
-  (let [[model _] (render-branch tree)]
-      (swap! branch-view assoc :submorphs [merge-button (scale-branch-model model 400)])))
-
-(def merge-button 
-  {:id "mergeButton"
-   :morph {:Position {:x 400 :y 100}
-           :onClick (fn [this]
-                      (branch-merge/merge-staged-branches @rendered-tree)
-                      (reset! highlighted-branches {})
-                      (refresh-view))}
-                      ;(branch-merge/merge-staged-branches @rendered-tree))}
-   :shape {:Extent {:x 55 :y 20}
-           :BorderColor "darkgrey"
-           :Fill "lightgrey"}
-   :submorphs [{:morph {:MorphClass "Text"
-                        :AllowInput false
-                        :Position {:x 5 :y 5}
-                        :TextString "Merge?"}
-                :shape {:ShapeClass "Text"}}]})
+  (refresh-view))
 
 (def branch-view (atom
   {:id "branchView"
    :shape {:Extent {:x 400 :y 100}}
    :morph {:Position {:x 50 :y 50} :isDraggable true}
-   :submorphs [merge-button]}))
+   :submorphs [merge-button cancel-button]}))
 
 (om/root
   (fn [app owner]
