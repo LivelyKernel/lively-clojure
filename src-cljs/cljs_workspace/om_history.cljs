@@ -4,7 +4,7 @@
             [cljs-workspace.morph 
               :as morphic 
               :refer [set-position set-fill set-extent add-morph remove-morph]]
-            [cljs-workspace.branch-vis :refer [render-tree]]))
+            [cljs-workspace.branch-vis :refer [render-tree is-master]]))
 
 (enable-console-print!)
 
@@ -31,10 +31,10 @@
   @branch-count)
 
 ;; global atom referencing the branch that we currently operate on
-(def current-branch (atom {:id (generate-uuid) :data (atom [])}))
+(def current-branch (atom {:id "Master" :data (atom [])}))
 
 ;; global atom referencing the total history graph
-(def app-history (atom {:id 1 :root @current-branch :data (@current-branch :data)}))
+(def app-history (atom {:id "Master" :data (@current-branch :data)}))
 
 ;; ffd
 (def history-view)
@@ -179,18 +179,25 @@
       (swap! branch conj s))
     (swap! branch conj s)))
 
-(defn save-state [n]
+(defn save-to-master [n]
+  (let [master-branch app-history]
+    (save-state n master-branch)))
+  
+(defn save-state
+  ([n] 
+    (save-state n current-branch))
+  ([n branch]
     (cond (> 100 @reverted-to -1 )
       ; we have to branch because a modification based on a reverted state:
       (branch-at @reverted-to n)
       ; else just append to history
       :else
-      (let [b @(@current-branch :data)]
+      (let [b @(@branch :data)]
         (when-not (= (last b) n)
-          (append-to-branch (@current-branch :data) n))
+          (append-to-branch (@branch :data) n))
         (let [c (len b)]
-            (render-tree @app-history @current-branch (fn [branch] (switch-to-branch branch)) (* c (/ index 100)))
-            (prn (str c " Saved " (pluralize c "State")))))))
+            (render-tree @app-history @branch (fn [b] (switch-to-branch b)) (* c (/ index 100)))
+            (prn (str c " Saved " (pluralize c "State"))))))))
 
 (om/root
   (fn [app owner]
