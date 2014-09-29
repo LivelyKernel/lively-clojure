@@ -26,12 +26,39 @@
   (atom {:url "/data"
           :server/id 42
           :coll {:id 4
-                                       :morph {:MorphClass "Text" 
-                                               :Position {:x 200 :y 200}
-                                               :TextString "Hallo Welt! Write something!"
-                                               :isDraggable true}
-                                       :shape {:ShapeClass "Text"
-                                               :Extent {:x 200 :y 400}}}}))
+                 :morph {:MorphClass "Text" 
+                         :Position {:x 200 :y 200}
+                         :TextString "Hallo Welt! Write something!"
+                         :isDraggable true}
+                 :shape {:ShapeClass "Text"
+                         :Extent {:x 200 :y 400}}}}))
+
+(def mario {:id "Mario", :shape {:ShapeClass "Image", :url "http://www.veryicon.com/icon/png/Game/Super%20Mario/Super%20Paper%20Mario.png", :Extent {:x 100, :y 100}}, :submorphs [], :morph {:isDraggable true, :Position {:x 50, :y 50}}})
+
+(def luigi {:id "Luigi", :shape {:ShapeClass "Image", :url "http://img4.wikia.nocookie.net/__cb20111019211716/villains/images/2/23/Super_paper_mario_-_luigi_2.png", :Extent {:x 100, :y 100}}, :submorphs [], :morph {:isDraggable true, :Position {:x 200, :y 200}}})
+
+(def subtitle {:id 5
+               :morph {:Position {:x 0 :y 420} :isDraggable true}
+               :shape {:Extent {:x 510 :y 200}
+                       :BorderColor "darkgrey"
+                       :BorderWidth 2
+                       :Fill "lightgrey"}
+                :submorphs [{:id 4
+                             :morph {:Preserve true
+                                     :MorphClass "Text" 
+                                     :Position {:x 10 :y 10}
+                                     :TextString "Welcome to Super Mario World!"
+                                     :isDraggable true}
+                             :shape {:ShapeClass "Text"
+                                     :Extent {:x 510 :y 200}}}]})
+
+(def mario-world
+  {:id "World"
+   :morph {:Position {:x 10 :y 10} :isDraggable true}
+   :shape {:Extent {:x 500 :y 400}
+           :ShapeClass "Image"
+           :url "http://images4.alphacoders.com/245/2456.jpg"}
+   :submorphs []})
 
 (def app-state
   (atom {:url "/data"
