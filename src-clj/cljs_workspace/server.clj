@@ -69,46 +69,8 @@
                         :BorderWidth 5
                         :BorderColor "rgb(0,0,0)"
                         :Fill "rgb(255,255,255)"
-                        :Extent {:x 300 :y 300}}
-                :submorphs [{:id 2
-                             :morph {:Position {:x 100 :y 100} :isDraggable true}
-                             :shape {:Fill "rgb(0,0,255)"
-                                     :Extent {:x 42 :y 42}}
-                             :submorphs []}
-                              {:id 6
-                               :morph {:Position {:x 200 :y 200} 
-                                       :isDraggable true}
-                               :shape {:ShapeClass "Image"
-                                       :Extent {:x 256 :y 256}
-                                       :url "http://www.veryicon.com/icon/png/Game/Super%20Mario/Super%20Paper%20Mario.png"}
-                                :submorphs []}
-                            {:id 7
-                               :morph {:Position {:x 200 :y 200} 
-                                       :isDraggable true}
-                               :shape {:ShapeClass "Image"
-                                       :Extent {:x 256 :y 256}
-                                       :url "http://img4.wikia.nocookie.net/__cb20111019211716/villains/images/2/23/Super_paper_mario_-_luigi_2.png"}
-                                :submorphs []}
-                             {:id 3
-                              :morph {:Position {:x 100 :y 100} :isDraggable true}
-                              :shape {:Fill "rgb(250, 250, 0)"
-                                      :ShapeClass "Ellipse"
-                                      :Extent {:x 100 :y 100}}}
-                              {:id 5
-                                :morph {:Position {:x 0 :y 0} :isDraggable true}
-                                :shape {:Extent {:x 220 :y 420}
-                                        :BorderColor "rgb(92,77, 11)"
-                                        :BorderWidth 2
-                                        :Fill "rgb(255,244,194)"}
-                                :submorphs [
-                                      {:id 4
-                                       :morph {:Preserve true
-                                               :MorphClass "Text" 
-                                               :Position {:x 10 :y 10}
-                                               :TextString "Hallo Welt! Write something!"
-                                               :isDraggable true}
-                                       :shape {:ShapeClass "Text"
-                                               :Extent {:x 200 :y 400}}}]}]}}))
+                        :Extent {:x 510 :y 410}}
+                :submorphs [mario-world mario luigi subtitle]}}))
 
 (defn set-app-state [params origin]
   (prn origin)
