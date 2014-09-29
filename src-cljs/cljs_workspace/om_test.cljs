@@ -143,7 +143,9 @@
             :tx-listen
             (fn [tx-data root-cursor]
                 (history/save-state (:new-state tx-data)) ; to enable the timeline
-                (when (is-master @current-branch) (put! tx-chan [tx-data root-cursor])))}))}))
+                (when (is-master @current-branch) 
+                  ; (put! tx-chan [tx-data root-cursor])
+                  (.send @socket (pr-str (select-keys tx-data [:new-value :path])))))}))}))
 
 ; (om/root
 ;   (fn [app owner]
@@ -153,3 +155,6 @@
 ;         history/history-slider)))
 ;   history/history-view 
 ;   {:target (. js/document (getElementById "inspector"))})
+
+; TODO: helper methods, to easy the repl interaction
+
