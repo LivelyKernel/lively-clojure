@@ -74,7 +74,7 @@
 
 (defn set-app-state [params origin]
   (prn origin)
-  (swap! app-state assoc-in (:path params) (:new-value params))
+  (reset! app-state (:new-state params))
   (doseq [client (keys @clients)]
       ;; send whole state, maybe optimize later on
       (when (not= client origin) (send! client (pr-str @app-state))))

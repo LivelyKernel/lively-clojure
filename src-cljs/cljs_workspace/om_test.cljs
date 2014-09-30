@@ -29,49 +29,44 @@
 
 (prn @morphic/right-click-behavior)
 
-(init-history 
+(def mario {:id "Mario", :shape {:ShapeClass "Image", :url "http://www.veryicon.com/icon/png/Game/Super%20Mario/Super%20Paper%20Mario.png", :Extent {:x 100, :y 100}}, :submorphs [], :morph {:isDraggable true, :Position {:x 50, :y 50}}})
+
+(def luigi {:id "Luigi", :shape {:ShapeClass "Image", :url "http://img4.wikia.nocookie.net/__cb20111019211716/villains/images/2/23/Super_paper_mario_-_luigi_2.png", :Extent {:x 100, :y 100}}, :submorphs [], :morph {:isDraggable true, :Position {:x 200, :y 200}}})
+
+(def mario-world
+  {:id "World"
+   :morph {:Position {:x 10 :y 10} :isDraggable true}
+   :shape {:Extent {:x 500 :y 400}
+           :ShapeClass "Image"
+           :url "http://images4.alphacoders.com/245/2456.jpg"}
+   :submorphs []})
+
+(def subtitle {:id 5
+               :morph {:Position {:x 0 :y 420} :isDraggable true}
+               :shape {:Extent {:x 510 :y 200}
+                       :BorderColor "darkgrey"
+                       :BorderWidth 2
+                       :Fill "lightgrey"}
+                :submorphs [{:id 4
+                             :morph {:Preserve true
+                                     :MorphClass "Text" 
+                                     :Position {:x 10 :y 10}
+                                     :TextString "Welcome to Super Mario World!"
+                                     :isDraggable true}
+                             :shape {:ShapeClass "Text"
+                                     :Extent {:x 510 :y 200}}}]})
+
+(init-history
          {:url "/data"
           :server/id 42
           :coll {:id 1
-                :morph {:id 1 :Position {:x 0 :y 100}}
+                :morph {:id 1 :Position {:x 50 :y 200}}
                 :shape {:id 1
                         :BorderWidth 5
                         :BorderColor "rgb(0,0,0)"
                         :Fill "rgb(255,255,255)"
-                        :Extent {:x 300 :y 300}}
-                :submorphs [{:id 2
-                             :morph {:Position {:x 100 :y 100} :isDraggable true}
-                             :shape {:Fill "rgb(0,0,255)"
-                                     :Extent {:x 42 :y 42}}
-                             :submorphs []}
-                             {:id 3
-                              :morph {:Position {:x 100 :y 100} :isDraggable true}
-                              :shape {:Fill "rgb(250, 250, 0)"
-                                      :ShapeClass "Ellipse"
-                                      :Extent {:x 100 :y 100}}}
-                              {:id 5
-                                :morph {:Position {:x 0 :y 0} :isDraggable true}
-                                :shape {:Extent {:x 110 :y 40}
-                                        :BorderColor "rgb(92,77, 11)"
-                                        :BorderWidth 2
-                                        :Fill "rgb(255,244,194)"}
-                                :submorphs [
-                                      {:id 4
-                                       :morph {:Preserve true
-                                               :MorphClass "Text" 
-                                               :Position {:x 10 :y 10}
-                                               :TextString "Hallo Welt!"
-                                               :isDraggable true}
-                                       :shape {:ShapeClass "Text"
-                                               :Extent {:x 100 :y 30}}}]}]}})
-
-(def text (atom {:id 4
-                 :morph {:MorphClass "Text" :Position {:x 100 :y 24}}
-                 :shape {:ShapeClass "Text"
-                         :Extent {:x 100 :y 30}
-                         :BorderColor "black"
-                         :BorderWidth 2}
-                  :submorphs []}))
+                        :Extent {:x 510 :y 410}}
+                :submorphs [mario-world mario luigi subtitle]}})
 
 (def socket 
   (atom nil))
@@ -144,8 +139,7 @@
             (fn [tx-data root-cursor]
                 (history/save-state (:new-state tx-data)) ; to enable the timeline
                 (when (is-master @current-branch) 
-                  ; (put! tx-chan [tx-data root-cursor])
-                  (.send @socket (pr-str (select-keys tx-data [:new-value :path])))))}))}))
+                  (.send @socket (pr-str (select-keys tx-data [:new-state])))))}))}))
 
 ; (om/root
 ;   (fn [app owner]
