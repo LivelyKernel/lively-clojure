@@ -33,7 +33,12 @@
                  :shape {:ShapeClass "Text"
                          :Extent {:x 200 :y 400}}}}))
 
-(def mario {:id "Mario", :shape {:ShapeClass "Image", :url "http://www.veryicon.com/icon/png/Game/Super%20Mario/Super%20Paper%20Mario.png", :Extent {:x 100, :y 100}}, :submorphs [], :morph {:isDraggable true, :Position {:x 50, :y 50}}})
+(def mario {:id "Mario", 
+			:shape {:ShapeClass "Image",
+				 	:url "http://www.veryicon.com/icon/png/Game/Super%20Mario/Super%20Paper%20Mario.png", 
+					:Extent {:x 100, :y 100}}, 
+					:submorphs [], 
+					:morph {:isDraggable true, :Position {:x 50, :y 50}}})
 
 (def luigi {:id "Luigi", :shape {:ShapeClass "Image", :url "http://img4.wikia.nocookie.net/__cb20111019211716/villains/images/2/23/Super_paper_mario_-_luigi_2.png", :Extent {:x 100, :y 100}}, :submorphs [], :morph {:isDraggable true, :Position {:x 200, :y 200}}})
 

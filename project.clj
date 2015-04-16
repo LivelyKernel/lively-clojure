@@ -6,7 +6,7 @@
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]]
 
-  :source-paths ["src-clj"]
+  :source-paths ["src/clj", "src/cljs"]
     
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2342"]
@@ -23,7 +23,7 @@
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :cljsbuild {:builds [{:id "om-test"
-                        :source-paths ["src-cljs"]
+                        :source-paths ["src/cljs"]
                         :compiler {:output-to "resources/public/js/om-test.js"
                                    :output-dir "resources/public/js/"
                                    :optimizations :whitespace

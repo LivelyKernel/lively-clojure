@@ -6,6 +6,8 @@
 (def merge-candidate (atom nil))
 (def staged-for-merge (atom {:from nil :into nil}))
 
+(def merge-callback (atom (fn [branch] false)))
+
 (defn merge-state [local-state remote-state]
     (let [merged (merge local-state remote-state)]
       ; recover the old values, that ar on the exclude list and return
@@ -94,7 +96,7 @@
          local (fp (first local-path)) ; we have to merge into all the subbranches anyway so we dont care for the rest path
          merged-branch (merge-from-flattened local remote)]
       (reset! (local :data) merged-branch) ; maybe clean up the remote branch that got included?
-      ))
+      (@merge-callback local)))
 
 (defn select-for-merge [branch cbk]
   ; if we select the same twice, we deselect

@@ -29,23 +29,23 @@
 
 ; morph property to CSS property translators
 
-(defn get-fill [value]
+(defn get-fill-css [value]
   {"background" value})
 
-(defn get-position [value]
+(defn get-position-css [value]
    {"position" "absolute" 
     "left" (:x value)
     "top" (:y value)})
 
-(defn get-extent [value]
+(defn get-extent-css [value]
   {"height" (:y value)
    "width" (:x value)})
 
-(defn get-border-width [value]
+(defn get-border-width-css [value]
   {"border-width" value
    "border-style" "solid"})
 
-(defn get-border-color [value]
+(defn get-border-color-css [value]
   {"border-color" value
    "border-style" "solid"})
 
@@ -58,11 +58,11 @@
   (apply merge 
         (map (fn [[prop value]] 
             (case prop 
-              :Fill (get-fill value)
-              :Position (get-position value)
-              :Extent (get-extent value)
-              :BorderWidth (get-border-width value)
-              :BorderColor (get-border-color value)
+              :Fill (get-fill-css value)
+              :Position (get-position-css value)
+              :Extent (get-extent-css value)
+              :BorderWidth (get-border-width-css value)
+              :BorderColor (get-border-color-css value)
               ;; more to come... 
               nil
               )) state)))

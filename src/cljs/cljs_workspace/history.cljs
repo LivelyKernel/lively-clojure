@@ -43,6 +43,9 @@
 ;; state of the branch and also which one we have reverted to
 (def reverted-to (atom -1))
 
+(defn update-master [fp new-branch-data]
+  )
+
 (defn most-recent-state []
   (let [l (len @(@current-branch :data))]
         (when (> l 0) (nth-history (- l 2)))))

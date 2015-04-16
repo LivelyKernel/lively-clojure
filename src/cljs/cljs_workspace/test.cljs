@@ -1,4 +1,4 @@
-(ns cljs-workspace
+(ns cljs-workspace.test
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [goog.events :as events]
             [goog.events.EventType :as EventType]
@@ -10,13 +10,16 @@
             [om-sync.core :refer [om-sync]]
             [om-sync.util :refer [tx-tag edn-xhr]]
             [cljs-workspace.morph :as morphic :refer [set-fill toggle-halo find-morph-path]]
-            [cljs-workspace.history :as history :refer [app-state init-history current-branch]]
-            [cljs-workspace.branch-merge :as branch-merge]
+            [cljs-workspace.history :as history :refer [app-state init-history current-branch update-master]]
+            [cljs-workspace.branch-merge :as branch-merge :refer [extract-branch]]
             [cljs-workspace.branch-vis :refer [is-master]]
             [cljs-workspace.repl :as repl])
   (:import [goog.events EventType]))
 
 (enable-console-print!)
+
+(def socket 
+  (atom nil))
 
 ; Initialize modules
 
@@ -28,6 +31,9 @@
     (toggle-halo app-state (state :id))))
 
 (prn @morphic/right-click-behavior)
+
+; Unfortunate module separation, but the merge module right now needs to know which
+; branch is the master, as this triggers a master rewrite on all clients through the server
 
 (def mario {:id "Mario", :shape {:ShapeClass "Image", :url "http://www.veryicon.com/icon/png/Game/Super%20Mario/Super%20Paper%20Mario.png", :Extent {:x 100, :y 100}}, :submorphs [], :morph {:isDraggable true, :Position {:x 50, :y 50}}})
 
@@ -85,7 +91,18 @@
 
 (defn send-update [state]
   (prn "Sending update!")
-  (.send @socket (pr-str (select-keys (state :tx-data) [:new-value :path]))))
+  (.send @socket (pr-str (select-keys (state :tx-data) [:new-state]))))
+
+(defn handle-push [e]
+  (when-let [state (read-string (.-data e))]
+    (.log js/console e)
+    (if (state :master-update)
+      (do
+        (prn "New master pushed!")
+        (update-master (state :new-master-branch)))
+      (do
+        (history/save-to-master state)
+        (when (is-master @current-branch) (reset! app-state state))))))
 
 (let [sub-chan (chan)]
 (defn app-view [app owner opts]
@@ -125,11 +142,7 @@
        (let [host (aget js/window "location" "hostname")
              port (aget js/window "location" "port")
              conn (js/WebSocket. (str "ws://" host ":" port "/ws"))]
-            (set! (.-onmessage conn) (fn [e] 
-              (when-let [state (read-string (.-data e))]
-                (.log js/console e)
-                (history/save-to-master state)
-                (when (is-master @current-branch) (reset! app-state state)))))
+            (set! (.-onmessage conn) handle-push)
             (reset! socket conn)) ; set the socket, so that it can be used for sending things
         (when-not (nil? res) (reset! app-state res))
         (om/root app-view app-state
