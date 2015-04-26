@@ -9,12 +9,12 @@
   :source-paths ["src/clj", "src/cljs"]
     
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2342"]
+                 [org.clojure/clojurescript "0.0-2760"]
                  [http-kit "2.1.16"]
                  [compojure "1.1.5"]
                  [ring "1.3.1"]
 				 [fogus/ring-edn "0.2.0"]
-                 [om "0.6.5"]
+                 [om "0.8.0-rc1"]
                  [org.clojure/core.async "0.1.303.0-886421-alpha"]
                  [cljs-tooling "0.1.3"]
                  [om-sync "0.1.1"]
@@ -24,7 +24,9 @@
 
   :cljsbuild {:builds [{:id "om-test"
                         :source-paths ["src/cljs"]
-                        :compiler {:output-to "resources/public/js/om-test.js"
+                        :compiler {
+                                   :main main.core
+                                   :output-to "resources/public/js/om-test.js"
                                    :output-dir "resources/public/js/"
-                                   :optimizations :whitespace
+                                   :optimizations :none
                                    :source-map "resources/public/js/om-test.js.map"}}]})
