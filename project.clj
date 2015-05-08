@@ -13,14 +13,10 @@
                  [http-kit "2.1.16"]
                  [compojure "1.1.5"]
                  [ring "1.3.1"]
-				 [fogus/ring-edn "0.2.0"]
+				         [fogus/ring-edn "0.2.0"]
                  [om "0.8.0-rc1"]
                  [org.clojure/core.async "0.1.303.0-886421-alpha"]
-                 [cljs-tooling "0.1.3"]
-                 [om-sync "0.1.1"]
-                 [com.cemerick/piggieback "0.1.3"]]
-
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+                 [cljs-tooling "0.1.3"]]
 
   :cljsbuild {:builds [{:id "om-test"
                         :source-paths ["src/cljs"]
