@@ -10,8 +10,9 @@
     
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2760"]
-                 [http-kit "2.1.16"]
-                 [compojure "1.1.5"]
+                 [org.rksm/cloxp-com "0.1.3"]
+                 [http-kit "2.1.19"]
+                 [compojure/compojure "1.3.2"]
                  [ring "1.3.1"]
 				         [fogus/ring-edn "0.2.0"]
                  [om "0.8.0-rc1"]
