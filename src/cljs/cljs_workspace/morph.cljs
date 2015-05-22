@@ -7,7 +7,8 @@
             [om.dom :as dom :include-macros true]
             [goog.style :as gstyle]
             [goog.dom :as gdom]
-            [cljs-workspace.draggable :as draggable :refer [clicked-morph]])
+            [cljs-workspace.draggable :as draggable :refer [clicked-morph]]
+            [om-tools.core :refer-macros [defcomponent]])
   (:import [goog.events EventType]))
 
 (enable-console-print!)
@@ -35,14 +36,22 @@
       (prn (.-timeStamp event) " ... was not yet handled!")
       true)))
 
-(defn handle-click [e state]
+(defn handle-enter [e ->self]
+  (when-let [cb (get-in @->self [:morph :onMouseEnter])]
+              (cb ->self)))
+
+(defn handle-leave [e ->self]
+  (when-let [cb (get-in @->self [:morph :onMouseLeave])]
+              (cb ->self)))
+
+(defn handle-click [e ->self]
   ; add/remove morph from preserve list
   ; (branch-merge/toggle-preserve state)
   ; handle the custom behavior
   (when (and (not-yet-handled e) (.-altKey e))
-    (@right-click-behavior e @state))
-  (when-let [cb (get-in @state [:morph :onClick])] 
-              (cb state)))
+    (@right-click-behavior e @->self))
+  (when-let [cb (get-in @->self [:morph :onClick])] 
+              (cb ->self)))
 
 ; morph property to CSS property translators
 
@@ -69,14 +78,21 @@
   {"borderColor" value
    "borderStyle" "solid"})
 
-(defn get-border-radius-css [value])
+(defn get-border-radius-css [value]
+  {"borderRadius" (str value "px")})
 
 (defn get-border-style-css [value])
+
+(defn get-drop-shadow-css [value]
+  (when value {"boxShadow" "0 18px 40px 10px rgba(0, 0, 0, 0.36)"}))
 
 (defn get-transform-css [{rotation :Rotation, scale :Scale, pivot :PivotPoint, 
                           :or {rotation 0, scale 1, pivot {:x 0, :y 0}}}]
   {html5TransformProperty (str "rotation(" rotation ") scale(" scale ")")
    html5TransformOriginProperty (str (:x pivot) "px " (:y pivot) "px")})
+
+(defn get-visibility-css [value]
+  {"visibility" (if value "visible" "hidden")})
 
 ; translation from morph data to CSS style prop
 
@@ -91,6 +107,7 @@
              (case prop 
               :Position (get-position-css value)
               (:Scale :Rotation :PivotPoint) (get-transform-css morph-props)
+              :Visible (get-visibility-css value)
               ;; more to come... 
               nil))) morph-props))))
 
@@ -106,12 +123,7 @@
               :Opacity (get-opacity-css value)
               :BorderRadius (get-border-radius-css value)
               :BorderStyle (get-border-style-css value)
-;   _BorderStyle: {/*...*/},
-;   _ClipMode: {/*...*/},
-;   _PreviousBorderWidth: {/*...*/},
-;   _StyleClassNames: {/*...*/},
-;   _StyleSheet: {/*...*/},
-; }
+              :DropShadow (get-drop-shadow-css value)
               ;; more to come... 
                 nil))) (get ->self :shape))))
 
@@ -125,16 +137,25 @@
 
 ; utilities
 
-(defn render-submorphs [app]
+(defn add-points [point & points]
+  (reduce (fn [p1 p2] {:x (+ (p1 :x) (p2 :x)) :y (+ (p1 :y) (p2 :y))}) point points))
+
+(defn is-visible [morph]
+  (let [visible (get-in morph [:morph :Visible])]
+    (if (nil? visible)
+      true
+      visible)))
+
+(defn render-submorphs [self]
   (dom/div #js {:className "originNode"}
     (apply dom/div nil
-      (om/build-all morph (get app :submorphs) {:state {:owner-morph app}}))))
+      (om/build-all morph (get self :submorphs) {:state {:owner-morph self}}))))
 
 ; property accessors
-
+    
 (defn find-morph-path
-  ([morph-model id] 
-    (if (contains? morph-model :coll) ; this is a hack to work with om-sync applied
+ ([morph-model id] 
+  (if (contains? morph-model :coll) ; this is a hack to work with om-sync applied
       (into [:coll] (find-morph-path (morph-model :coll) id []))
       (into [] (find-morph-path morph-model id []))))
   ([morph-model id path]
@@ -151,8 +172,12 @@
 
 (defn add-morph [->owner morph]
   (let [submorphs (or (get @->owner :submorphs) [])
-        morph-owner (assoc morph :owner ->owner)]
-    (om/update! ->owner :submorphs (conj submorphs morph-owner))))
+        owned-morph (assoc morph :owner ->owner)]
+    (om/update! ->owner :submorphs (conj submorphs owned-morph))
+    ; we need to continue diving down the morph hierarchy and fix
+    ; parent child refs as these could have been defined in
+    ; the model previously but not yet materialized
+    (when-let [submorphs ()])))
 
 (defn remove-morph [->owner morph-id]
   (let [submorphs (get @->owner :submorphs)]
@@ -163,6 +188,11 @@
 
 (defn set-fill [->morph color]
   (om/update! ->morph [:shape :Fill] color))
+
+(defn toggle-visibility [->morph]
+  (if (is-visible ->morph)
+    (om/update! ->morph [:morph :Visible] false)
+    (om/update! ->morph [:morph :Visible] true)))
 
 (defn set-extent [->morph extent]
   (om/update! ->morph [:shape :Extent] extent))
@@ -190,7 +220,9 @@
                        :className "morphNode"
                        :onClick #(handle-click % app)
                        :onMouseDown #(draggable/start-dragging % app owner)
-                       :onMouseUp #(draggable/stop-dragging % app owner)} 
+                       :onMouseUp #(draggable/stop-dragging % app owner)
+                       :onMouseEnter #(handle-enter % app)
+                         :onMouseLeave #(handle-leave % app)} 
                    (when (get-in app [:morph :Halo])
                       (render-halo app owner))
                    (shape app owner))))))
@@ -208,7 +240,7 @@
   (let [style (extract-shape-css app)]
     ;; we apply some customizations to the style, to make the shape elliptical
     (let [ellipse-style (assoc style 
-                          "border-radius" (str (style "width") " /" (style "height")))]
+                               "borderRadius" (str (style "width") "px /" (style "height") "px"))]
       (dom/div #js {:style (dict->js ellipse-style)} (render-submorphs app)))))
 
 (defmethod shape :default [app owner]
@@ -286,6 +318,9 @@
 (defn get-text-color-css [color]
   {"textColor" color})
 
+(defn get-prevent-selection-css [value]
+  (when (false? value) {"-webkit-user-select" "none"}))
+
 (defn extract-text-css [->self]
      (apply merge 
        (map (fn [[prop value]]               
@@ -298,6 +333,7 @@
                :MinTextHeight (get-min-text-height-css value)
                :MinTextWidth (get-min-text-width-css value)
                :TextColor (get-text-color-css value)
+               :AllowInput (get-prevent-selection-css value)
                ; :Padding ... this is actually default?
                :WordBreak ()
                 ;   _WhiteSpaceHandling: {/*...*/},
@@ -327,7 +363,6 @@
                     :ref "myInput"} (get-in ->text-morph [:morph :TextString])))
 
 (defmethod shape "Text" [app owner]
-  (prn "Rendering Text Shape")
   (let [style (extract-shape-css app)]
     (let [text-style (assoc style "cursor" "default")]
       (dom/div #js {:style (dict->js text-style)
@@ -341,4 +376,4 @@
         (dom/div  #js {:style style
                        :className "morphNode" } (shape app owner))))))
 
-
+;; ACE MORPH
