@@ -7,8 +7,6 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [goog.style :as gstyle]
-            [om-sync.core :refer [om-sync]]
-            [om-sync.util :refer [tx-tag edn-xhr]]
             [cljs-workspace.morph :as morphic :refer [set-fill toggle-halo find-morph-path]]
             [cljs-workspace.history :as history :refer [app-state init-history current-branch update-master]]
             [cljs-workspace.branch-merge :as branch-merge :refer [extract-branch]]

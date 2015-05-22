@@ -7,8 +7,7 @@
             [om.dom :as dom :include-macros true]
             [goog.style :as gstyle]
             [goog.dom :as gdom]
-            [cljs-workspace.draggable :as draggable :refer [clicked-morph]]
-            [om-tools.core :refer-macros [defcomponent]])
+            [cljs-workspace.draggable :as draggable :refer [clicked-morph]])
   (:import [goog.events EventType]))
 
 (enable-console-print!)

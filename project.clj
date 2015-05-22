@@ -15,5 +15,4 @@
    [fogus/ring-edn "0.2.0"]
    [om "0.8.0-rc1"]
    [org.clojure/core.async "0.1.303.0-886421-alpha"]
-   [cljs-tooling "0.1.3"]
-   [prismatic/om-tools "0.3.0" :exclusions [org.clojure/clojure]]])
+   [cljs-tooling "0.1.3"]])
