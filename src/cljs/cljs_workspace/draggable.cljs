@@ -37,37 +37,26 @@
   (and (get-in self [:morph :isDraggable])))
 
 (defn is-clicked [self]
-  (= (self :id) @clicked-morph))
+  (= (self :id) (:id (@clicked-morph :>>))))
 
-(defn drag [e ->self offset]
-  (let [self @->self
-        old-pos (get-in self [:morph :Position])
-        [prev-cursor-x, prev-cursor-y] @prev-cursor-pos
-        [delta-x, delta-y] [(- (.-clientX e) prev-cursor-x) (- (.-clientY e) prev-cursor-y)]
-        [new-pos-x, new-pos-y] [(+ (old-pos :x) delta-x) (+ (old-pos :y) delta-y)]]
-    (when (and (is-clicked self) (is-draggable self))
-      (swap! prev-cursor-pos #(identity [(.-clientX e) (.-clientY e)]))
-      (if-not 
-        (if-let [callback (get-in self [:morph :onDrag])]
-            ; custom behavior
-            (callback ->self {:x new-pos-x :y new-pos-y})
-            false)
+(defn drag [e self]
+  (.preventDefault e)
+  (when (and (not (nil? @clicked-morph)) (is-draggable (@clicked-morph :>>)))
+    (let [old-pos (get-in (@clicked-morph :>>) [:morph :Position])
+          [prev-cursor-x, prev-cursor-y] @prev-cursor-pos
+          [delta-x, delta-y] [(- (.-clientX e) prev-cursor-x) (- (.-clientY e) prev-cursor-y)]
+          [new-pos-x, new-pos-y] [(+ (old-pos :x) delta-x) (+ (old-pos :y) delta-y)]
+          callback (get-in (@clicked-morph :>>) [:morph :onDrag])
+          do-default (or (nil? callback) (callback @clicked-morph {:x new-pos-x :y new-pos-y}))]
         ; default behavior
-        (om/update! ->self [:morph :Position] {:x new-pos-x :y new-pos-y})))))
+        (when do-default (om/update! (@clicked-morph :>>) [:morph :Position] {:x new-pos-x :y new-pos-y})))))
 
-(defn stop-dragging [e ->self owner]
-  (swap! clicked-morph #(identity nil))
-    (doto js/window
-      (events/unlisten EventType.MOUSEUP stop-dragging)
-      (events/unlisten EventType.MOUSEMOVE #(drag % ->self nil)))) ;; let the event propagate further down ??
+(defn stop-dragging [e self owner]
+  (let [->self (self :>>)]
+    (swap! clicked-morph #(identity nil))))
 
-(defn start-dragging [e ->self owner]
-  (swap! prev-cursor-pos #(identity [(.-clientX e) (.-clientY e)]))
-  (when (and (is-draggable @->self) (not @clicked-morph)) 
-    (swap! clicked-morph #(@->self :id)))
-    ;; start listening for mouse movements in the window in case the mouse cursor
-    ;; escapes temporarily from the dragged morph
-  (let [[offset-x, offset-y] (element-offset (om/get-node owner))]
-    (doto js/window
-      (events/listen EventType.MOUSEUP stop-dragging)
-      (events/listen EventType.MOUSEMOVE #(drag % ->self [offset-x offset-y]))))) ;; let the event propagate further down
+(defn start-dragging [e self owner]
+  (let [->self (self :>>)]
+    (swap! prev-cursor-pos #(identity [(.-clientX e) (.-clientY e)]))
+    (when (and (is-draggable ->self) (not @clicked-morph)) 
+      (swap! clicked-morph (fn [_] self)))))

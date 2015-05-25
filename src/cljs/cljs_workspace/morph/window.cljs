@@ -19,14 +19,15 @@
 (def close-box
   {:id "closeBox"
    :morph {:Position {:x 10 :y 10}
-           :onMouseEnter (fn [->self _] 
-                           (let [x-box (get-in ->self [:submorphs 0])]
+           :onMouseEnter (fn [self _] 
+                           (let [x-box (-> self :>> :submorphs (get 0))]
                              (morphic/toggle-visibility x-box)))
-           :onMouseLeave (fn [->self _] 
-                           (let [x-box (get-in ->self [:submorphs 0])]
+           :onMouseLeave (fn [self _] 
+                           (let [x-box (-> self :>> :submorphs (get 0))]
                              (morphic/toggle-visibility x-box)))
-           :onClick (fn [->self _]
-                      (let [->target (get-in ->self [:owner :owner])]
+           :onClick (fn [self _]
+                      (let [->self (self :>>)
+                             ->target (prn (om/path ->self))]
                         (morphic/remove-morph (get-in ->target :owner) (get @->target :id))))}
    :shape {:ShapeClass "Ellipse"
            :Extent {:x control-height :y control-height}
@@ -71,10 +72,11 @@
   {:id "Button"
    :morph {:Position (morphic/add-points owner-extent {:x 5 :y 5}) 
            :isDraggable true
-           :onDrag (fn [->self _]
-                     (let [->target (get-in ->self [:owner])]
-                       (morphic/set-extent ->target (morphic/add-points {:x -5 :y -5} (get-in @->self [:morph :Position]))) 
-                        false))} ;; continue with usual drag handling
+           :onDrag (fn [self _]
+                     (let [->self (self :>>)
+                           ->target (self :owner)]
+                       (morphic/set-extent ->target (morphic/add-points {:x -5 :y -5} (get-in @->self [:morph :Position])))
+                       true))}
    :shape {:ShapeClass "Image"
            :Extent {:x 15 :y 15}
            :url "http://lively-web.org/core/media/halos/resize.svg"}})

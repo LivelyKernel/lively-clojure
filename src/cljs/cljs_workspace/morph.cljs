@@ -35,22 +35,25 @@
       (prn (.-timeStamp event) " ... was not yet handled!")
       true)))
 
-(defn handle-enter [e ->self]
-  (when-let [cb (get-in @->self [:morph :onMouseEnter])]
-              (cb ->self)))
+(defn handle-enter [e self]
+  (let [->self (self :>>)]
+    (when-let [cb (get-in ->self [:morph :onMouseEnter])]
+                (cb self))))
 
-(defn handle-leave [e ->self]
-  (when-let [cb (get-in @->self [:morph :onMouseLeave])]
-              (cb ->self)))
+(defn handle-leave [e self]
+  (let [->self (self :>>)]
+    (when-let [cb (get-in ->self [:morph :onMouseLeave])]
+                (cb self))))
 
-(defn handle-click [e ->self]
+(defn handle-click [e self]
   ; add/remove morph from preserve list
   ; (branch-merge/toggle-preserve state)
   ; handle the custom behavior
+  (let [->self (self :>>)]
   (when (and (not-yet-handled e) (.-altKey e))
     (@right-click-behavior e @->self))
   (when-let [cb (get-in @->self [:morph :onClick])] 
-              (cb ->self)))
+                  (cb self))))
 
 ; morph property to CSS property translators
 
@@ -148,7 +151,7 @@
 (defn render-submorphs [self]
   (dom/div #js {:className "originNode"}
     (apply dom/div nil
-      (om/build-all morph (get self :submorphs) {:state {:owner-morph self}}))))
+      (om/build-all morph (get self :submorphs) {:state {:owner (om/ref-cursor self)}}))))
 
 ; property accessors
     
@@ -166,21 +169,19 @@
             (concat path [:submorphs %])) (range (count submorphs)))
           nil)))))
 
-(defn find-morph [*model id]
-  (make-cursor *model (find-morph-path @*model id)))
+(defn find-morph [->model id]
+  (get-in ->model (find-morph-path @->model id)))
 
 (defn add-morph [->owner morph]
-  (let [submorphs (or (get @->owner :submorphs) [])
-        owned-morph (assoc morph :owner ->owner)]
-    (om/update! ->owner :submorphs (conj submorphs owned-morph))
-    ; we need to continue diving down the morph hierarchy and fix
-    ; parent child refs as these could have been defined in
-    ; the model previously but not yet materialized
-    (when-let [submorphs ()])))
+  (let [submorphs (or (get @->owner :submorphs) [])]
+    (om/update! ->owner :submorphs (conj submorphs morph))))
 
 (defn remove-morph [->owner morph-id]
   (let [submorphs (get @->owner :submorphs)]
     (om/update! ->owner :submorphs (into [] (filter #(not= (% :id) morph-id) submorphs)))))
+
+(defn set-rotation [->morph origin degrees]
+  (om/update! ->morph :morph (-> (:morph @->morph) (assoc :Rotation degrees) (assoc :PivotPoint origin))))
 
 (defn set-position [->morph pos]
   (om/update! ->morph [:morph :Position] pos))
@@ -212,18 +213,19 @@
 
 (defmethod morph :default [app owner]
   (reify
-    om/IRender
-    (render [this]
-        (let [style (dict->js (extract-morph-css app))]
+    om/IRenderState
+    (render-state [_ state]
+                  (let [state (assoc state :>> (om/ref-cursor app))
+              style (dict->js (extract-morph-css app))]
           (dom/div  #js {:style style
                        :className "morphNode"
-                       :onClick #(handle-click % app)
-                       :onMouseDown #(draggable/start-dragging % app owner)
-                       :onMouseUp #(draggable/stop-dragging % app owner)
-                       :onMouseEnter #(handle-enter % app)
-                         :onMouseLeave #(handle-leave % app)} 
-                   (when (get-in app [:morph :Halo])
-                      (render-halo app owner))
+                       :onClick #(handle-click % state)
+                       :onMouseDown #(draggable/start-dragging % state owner)
+                       :onMouseUp #(draggable/stop-dragging % state owner)
+                       :onMouseMove #(draggable/drag % state)
+                       :onMouseEnter #(handle-enter % state)
+                       :onMouseLeave #(handle-leave % state)} 
+                   (when (get-in app [:morph :Halo]) (render-halo app owner))
                    (shape app owner))))))
 
 ;; multi method for shape
@@ -367,7 +369,7 @@
       (dom/div #js {:style (dict->js text-style)
                     :className "Morph Text"} (create-text-node app owner)))))
 
-(defmethod morph "Text" [app owner]
+(defmethod morph "Text" [app owner opts]
   (reify
     om/IRender
     (render [this]
