@@ -16,57 +16,58 @@
    :shape {:ShapeClass "Text"
            :Extent {:x 100 :y 20}}})
 
-(def close-box
+(defn close-box [$morph target-id]
   {:id "closeBox"
    :morph {:Position {:x 10 :y 10}
            :onMouseEnter (fn [self _] 
-                           (let [x-box (-> self :>> :submorphs (get 0))]
-                             (morphic/toggle-visibility x-box)))
+                           (let [x-box (-> self :>> :submorphs first)]
+                             (om/update! x-box [:morph :Visible] true)))
            :onMouseLeave (fn [self _] 
-                           (let [x-box (-> self :>> :submorphs (get 0))]
-                             (morphic/toggle-visibility x-box)))
+                           (let [x-box (-> self :>> :submorphs first)]
+                             (om/update! x-box [:morph :Visible] false)))
            :onClick (fn [self _]
-                      (let [->self (self :>>)
-                             ->target (prn (om/path ->self))]
-                        (morphic/remove-morph (get-in ->target :owner) (get @->target :id))))}
+                      (let [->target ($morph target-id)]
+                        (prn "Closing window" @($morph "World"))
+                        (morphic/remove-morph ($morph "World") target-id)))}
    :shape {:ShapeClass "Ellipse"
            :Extent {:x control-height :y control-height}
            :Fill "#ff6052"}
-   :submorphs [{:morph {:Position {:x 2 :y -2}
+   :submorphs [{:morph {:Position {:x -4 :y -8}
                         :TextString "×"
                         :FontSize 10 
                         :AllowInput false
                         :Visible false}
                 :shape {:ShapeClass "Text"}}]})
 
-(def min-box
+(defn min-box [$morph target-id]
   {:id "minBox"
    :morph {:Position {:x 30 :y 10}
-           :onMouseEnter (fn [->self _] 
-                           (let [x-box (get-in ->self [:submorphs 0])]
-                             (morphic/toggle-visibility x-box)))
-           :onMouseLeave (fn [->self _] 
-                           (let [x-box (get-in ->self [:submorphs 0])]
-                             (morphic/toggle-visibility x-box)))
-           :onClick (fn [->self]
-                      (let [->target (get-in ->self [:owner :owner])
-                            width (get @->target [:shape :Extent :x])]
-                        (morphic/set-extent ->target {:x width :y 15})))}
+           :onMouseEnter (fn [self _] 
+                           (let [x-box (-> self :>> :submorphs first)]
+                             (om/update! x-box [:morph :Visible] true)))
+           :onMouseLeave (fn [self _] 
+                           (let [x-box (-> self :>> :submorphs first)]
+                             (om/update! x-box [:morph :Visible] false)))
+           :onClick (fn [self]
+                      ; Fixme: Double hopping not yet possible, as parent refs are local to morphs
+                      (let [->target ($morph target-id)
+                            width (-> ->target :shape :Extent :x)]
+                        (morphic/set-extent ->target {:x width :y 30})))}
    :shape {:ShapeClass "Ellipse"
            :Extent {:x control-height :y control-height}
            :Fill "#ffbe06"}
-   :submorphs [{:morph {:Position {:x 2 :y -2}
+   :submorphs [{:morph {:Position {:x -4 :y -8.5}
                         :TextString "−"
                         :FontSize 10 
                         :AllowInput false
                         :Visible false}
                 :shape {:ShapeClass "Text"}}]})
 
-(def window-bar
+(defn window-bar [$morph target-id]
   {:id "windowbar"
    :morph {:Position {:x 0 :y 0}}
    :shape {:Extent {:x 200 :y 30}}
-   :submorphs [(name-morph "Workspace") min-box close-box]})
+   :submorphs [(name-morph target-id) (min-box $morph target-id) (close-box $morph target-id)]})
 
 (defn resize-button [owner-extent]
   {:id "Button"
@@ -81,7 +82,7 @@
            :Extent {:x 15 :y 15}
            :url "http://lively-web.org/core/media/halos/resize.svg"}})
 
-(defn create-window [{name :name, position :position, extent :extent}]
+(defn create-window [{name :name, position :position, extent :extent, $morph :$morph}] 
   {:id name
    :morph {:Position position
            :isDraggable true}
@@ -91,4 +92,4 @@
            :BorderRadius 10
            :BorderWidth 1
            :DropShadow true}
-   :submorphs [(resize-button extent), window-bar]})
+   :submorphs [(resize-button extent), (window-bar $morph name)]})
