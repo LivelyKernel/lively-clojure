@@ -63,4 +63,4 @@
 (morphic/add-morph ($morph "World") clock)
 (morphic/add-morph ($morph "World") world-workspace-b)
 
-(morphic/call-step ($morph "Clock"))
+(morphic/start-stepping ($morph "Clock"))

@@ -1,8 +1,8 @@
 (ns cljs-workspace.morph
-  (:require-macros [cljs.core.async.macros :refer [go]])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [goog.events :as events]
             [goog.events.EventType :as EventType]
-            [cljs.core.async :as async :refer [>! <! put! chan]]
+            [cljs.core.async :as async :refer [>! <! put! chan timeout]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [goog.style :as gstyle]
@@ -220,8 +220,11 @@
             false
             true))))
 
-(defn call-step [->morph]
-  ((-> ->morph :morph :step) ->morph))
+(defn start-stepping [->morph]
+  (go-loop [seconds 1]
+    (<! (timeout (/ 1000 (:fps ->morph))))
+         ((-> ->morph :morph :step) ->morph)
+         (recur (inc seconds))))
 
 ; render based on ad hoc definition of morph like frame
 ; to visualize the halo
@@ -288,7 +291,6 @@
     e))
 
 (defn render-path-node [app owner]
-  ; (prn (flatten (map unpack (get-in app [:shape :PathElements]))))
   (let [vertices (flatten (map unpack (get-in app [:shape :PathElements])))
         minX (apply min (map #(% :x) vertices))
         minY (apply min (map #(% :y) vertices))

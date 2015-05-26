@@ -74,7 +74,6 @@
                      (let [{:keys [hours minutes seconds]} (get-current-time)
                            minutes (+ minutes (/ seconds 60))
                            hours (+ hours (/ minutes 60))]
-                       (prn (* (/ minutes 60) 2 PI))
                        (morphic/set-rotation ($morph "HourPointer") (angle-for-hour hours) {:x 0 :y 0})
                        (morphic/set-rotation ($morph "MinutePointer") (* (+ -0.25 (/ minutes 60)) 2 PI) {:x 0 :y 0})
                        (morphic/set-rotation ($morph "SecondPointer") (* (+ -0.25 (/ seconds 60)) 2 PI) {:x 0 :y 0})))}

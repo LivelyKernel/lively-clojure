@@ -27,7 +27,6 @@
                              (om/update! x-box [:morph :Visible] false)))
            :onClick (fn [self _]
                       (let [->target ($morph target-id)]
-                        (prn "Closing window" @($morph "World"))
                         (morphic/remove-morph ($morph "World") target-id)))}
    :shape {:ShapeClass "Ellipse"
            :Extent {:x control-height :y control-height}
