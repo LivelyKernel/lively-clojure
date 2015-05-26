@@ -5,6 +5,7 @@
             [goog.style :as gstyle]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
+            [cljs-workspace.morph.clock :refer [create-clock]]
             [cljs-workspace.morph.window :refer [create-window]]
             [cljs-workspace.morph :as morphic]
             [cljs-workspace.repl :as repl]
@@ -12,6 +13,14 @@
   (:import [goog.events EventType]))
 
 (cloxp/start)
+
+(defn get-current-time
+  "current time as a map"
+  []
+  (let [d (js/Date.)]
+    {:hours (.getHours d)
+     :minutes (.getMinutes d)
+     :seconds (.getSeconds d)}))
 
 (def space-state
   (atom {:id "World"
@@ -31,19 +40,27 @@
 (om/root
   morphic/morph
   space-state
-  {:target (. js/document (getElementById "app"))
-   :state {:id "World"
-         :morph {:Position {:x 0 :y 0}}
-         :shape {:Extent {:x 1280 :y 800}
-                 :BorderColor "darkgrey"
-                 :BorderWidth 2
-                 :Fill "lightgrey"}}})
+  {:target (. js/document (getElementById "app"))})
 
-(def world-workspace (create-window {:position {:x 100 :y 100} :name "Workspace" :extent {:x 200 :y 300}}))
-
-(def space-cursor (morphic/make-cursor space-state))
+(defn space-cursor [] (om/root-cursor space-state))
 
 (defn $morph [id]
-  (morphic/find-morph space-state id))
+  (morphic/find-morph (space-cursor) id))
 
-(morphic/add-morph ($morph "World") world-workspace)
+(def world-workspace-a (create-window {:position {:x 100 :y 100} 
+                                     :name "WorkspaceA" 
+                                     :extent {:x 200 :y 300}
+                                     :$morph $morph}))
+
+(def world-workspace-b (create-window {:position {:x 300 :y 500} 
+                                     :name "WorkspaceB" 
+                                     :extent {:x 200 :y 300}
+                                     :$morph $morph}))
+
+(def clock (create-clock $morph {:x 501 :y 501}))
+
+(morphic/add-morph ($morph "World") world-workspace-a)
+(morphic/add-morph ($morph "World") clock)
+(morphic/add-morph ($morph "World") world-workspace-b)
+
+(morphic/call-step ($morph "Clock"))
