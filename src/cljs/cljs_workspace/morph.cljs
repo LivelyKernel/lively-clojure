@@ -18,8 +18,8 @@
   ([*atom kws]
      (om/to-cursor @*atom *atom kws)))
 
-(def html5TransformProperty "-webkit-transform")
-(def html5TransformOriginProperty "-webkit-transform-origin")
+(def html5TransformProperty "WebkitTransform")
+(def html5TransformOriginProperty "WebkitTransformOrigin")
 
 ; Event handling
 
@@ -90,7 +90,7 @@
 
 (defn get-transform-css [{rotation :Rotation, scale :Scale, pivot :PivotPoint, 
                           :or {rotation 0, scale 1, pivot {:x 0, :y 0}}}]
-  {html5TransformProperty (str "rotation(" rotation ") scale(" scale ")")
+  {html5TransformProperty (str "rotate(" (mod (/ (* rotation 180) js/Math.PI) 360) "deg) scale(" scale "," scale ")")
    html5TransformOriginProperty (str (:x pivot) "px " (:y pivot) "px")})
 
 (defn get-visibility-css [value]
@@ -126,7 +126,7 @@
               :BorderRadius (get-border-radius-css value)
               :BorderStyle (get-border-style-css value)
               :DropShadow (get-drop-shadow-css value)
-              ;; more to come... 
+              ;; more to come... :CSS for custom modifications to that very morph
                 nil))) (get ->self :shape))))
 
 ; morph component + rendering functions
@@ -139,6 +139,9 @@
 
 ; utilities
 
+(defn point-from-polar [radius angle]
+  {:x (* radius (.cos js/Math angle)) :y (* radius (.sin js/Math angle))})
+
 (defn add-points [point & points]
   (reduce (fn [p1 p2] {:x (+ (p1 :x) (p2 :x)) :y (+ (p1 :y) (p2 :y))}) point points))
 
@@ -148,8 +151,16 @@
       true
       visible)))
 
-(defn render-submorphs [self]
-  (dom/div #js {:className "originNode"}
+(defn render-submorphs [self & [offset]]
+  (when offset (prn offset))
+  (dom/div #js {:className "originNode" 
+                :style (if offset 
+                         (dict->js {"position" "absolute",
+                                    "top" (str (/ (:y offset) 2) "px !important"),
+                                    "left" (str (/ (:x offset) 2) "px !important"),
+                                    "marginTop" "-2px",
+                                    "margineft" "-2px"})
+                         {})}
     (apply dom/div nil
       (om/build-all morph (get self :submorphs) {:state {:owner (om/ref-cursor self)}}))))
 
@@ -177,11 +188,13 @@
     (om/update! ->owner :submorphs (conj submorphs morph))))
 
 (defn remove-morph [->owner morph-id]
-  (let [submorphs (get @->owner :submorphs)]
-    (om/update! ->owner :submorphs (into [] (filter #(not= (% :id) morph-id) submorphs)))))
+  (let [submorphs (get @->owner :submorphs)
+        new-submorphs (into [] (filter #(not= (% :id) morph-id) submorphs))]
+    (prn (map #(% :id) new-submorphs))
+    (om/update! ->owner :submorphs new-submorphs)))
 
-(defn set-rotation [->morph origin degrees]
-  (om/update! ->morph :morph (-> (:morph @->morph) (assoc :Rotation degrees) (assoc :PivotPoint origin))))
+(defn set-rotation [->morph rad origin]
+  (om/update! ->morph :morph (-> (:morph @->morph) (assoc :Rotation rad) (assoc :PivotPoint origin))))
 
 (defn set-position [->morph pos]
   (om/update! ->morph [:morph :Position] pos))
@@ -207,26 +220,33 @@
             false
             true))))
 
+(defn call-step [->morph]
+  ((-> ->morph :morph :step) ->morph))
+
 ; render based on ad hoc definition of morph like frame
 ; to visualize the halo
 (defn render-halo [app owner])
 
 (defmethod morph :default [app owner]
   (reify
+    om/IInitState
+    (init-state [_]
+       {:owner nil})
     om/IRenderState
     (render-state [_ state]
+                  
                   (let [state (assoc state :>> (om/ref-cursor app))
-              style (dict->js (extract-morph-css app))]
-          (dom/div  #js {:style style
-                       :className "morphNode"
-                       :onClick #(handle-click % state)
-                       :onMouseDown #(draggable/start-dragging % state owner)
-                       :onMouseUp #(draggable/stop-dragging % state owner)
-                       :onMouseMove #(draggable/drag % state)
-                       :onMouseEnter #(handle-enter % state)
-                       :onMouseLeave #(handle-leave % state)} 
-                   (when (get-in app [:morph :Halo]) (render-halo app owner))
-                   (shape app owner))))))
+                        style (dict->js (extract-morph-css app))]
+                    (dom/div  #js {:style style
+                                   :className "morphNode"
+                                   :onClick #(handle-click % state)
+                                   :onMouseDown #(draggable/start-dragging % state owner)
+                                   :onMouseUp #(draggable/stop-dragging % state owner)
+                                   :onMouseMove #(draggable/drag % state)
+                                   :onMouseEnter #(handle-enter % state)
+                                   :onMouseLeave #(handle-leave % state)} 
+                      (when (get-in app [:morph :Halo]) (render-halo app owner))
+                      (shape app owner))))))
 
 ;; multi method for shape
 
@@ -242,7 +262,7 @@
     ;; we apply some customizations to the style, to make the shape elliptical
     (let [ellipse-style (assoc style 
                                "borderRadius" (str (style "width") "px /" (style "height") "px"))]
-      (dom/div #js {:style (dict->js ellipse-style)} (render-submorphs app)))))
+      (dom/div #js {:style (dict->js ellipse-style)} (render-submorphs app (get-in app [:shape :Extent]))))))
 
 (defmethod shape :default [app owner]
   (let [style (extract-shape-css app)]
@@ -268,7 +288,7 @@
     e))
 
 (defn render-path-node [app owner]
-  (prn (flatten (map unpack (get-in app [:shape :PathElements]))))
+  ; (prn (flatten (map unpack (get-in app [:shape :PathElements]))))
   (let [vertices (flatten (map unpack (get-in app [:shape :PathElements])))
         minX (apply min (map #(% :x) vertices))
         minY (apply min (map #(% :y) vertices))
