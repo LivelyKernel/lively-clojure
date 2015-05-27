@@ -7,7 +7,8 @@
             [om.dom :as dom :include-macros true]
             [goog.style :as gstyle]
             [goog.dom :as gdom]
-            [cljs-workspace.draggable :as draggable :refer [clicked-morph]])
+            [cljs-workspace.draggable :as draggable :refer [clicked-morph]]
+            [om-tools.core :refer-macros [defcomponent]])
   (:import [goog.events EventType]))
 
 (enable-console-print!)
@@ -35,15 +36,17 @@
       (prn (.-timeStamp event) " ... was not yet handled!")
       true)))
 
+(defn handle-resize [e self]
+  (when-let [cb (-> self :>> :morph :onResize)]
+                (cb self)))
+
 (defn handle-enter [e self]
-  (let [->self (self :>>)]
-    (when-let [cb (get-in ->self [:morph :onMouseEnter])]
-                (cb self))))
+  (when-let [cb (-> self :>> :morph :onMouseEnter)]
+                (cb self)))
 
 (defn handle-leave [e self]
-  (let [->self (self :>>)]
-    (when-let [cb (get-in ->self [:morph :onMouseLeave])]
-                (cb self))))
+  (when-let [cb (-> self :>> :morph :onMouseLeave)]
+                (cb self)))
 
 (defn handle-click [e self]
   ; add/remove morph from preserve list
@@ -400,3 +403,44 @@
                        :className "morphNode" } (shape app owner))))))
 
 ;; ACE MORPH
+
+; Note that from a rendering perspective this is a dead end currently. Since we leave the om managed environment,
+; we can not support submorphs of an AceMorph in any meaningful way.
+
+(defn set-value! [ace-instance value]
+  (let [cursor (.getCursorPositionScreen ace-instance)]
+    (.setValue ace-instance value cursor)))
+
+(defn change-handler [ace-instance owner]
+  (om/set-state-nr! owner :edited-value (.getValue ace-instance)))
+
+(defcomponent editor-area [self owner]
+  (render [_]
+          (dom/div #js {:id "ace" :style #js {:height (-> self :shape :Extent :y) :width (-> self :shape :Extent :x)} :className "ace"}))
+  (will-mount [_]
+    (let [editor-chan (om/get-state owner :editor-chan)]
+      (go
+        (while true
+          (when (= :save! (<! editor-chan))
+            (when-let [edited-value (om/get-state owner :edited-value)]
+              (om/update! self [:morph :value] edited-value)))))))
+  (did-mount [_]
+    (let [ace-instance (.edit js/ace
+                              (.getDOMNode owner))]
+      (om/set-state-nr! owner :ace-instance ace-instance)
+      (.. ace-instance
+          getSession
+          (on "change" #(change-handler ace-instance owner)))
+      (prn "setting value to" (-> self :morph :value))
+      (set-value! ace-instance (-> self :morph :value))))
+  (will-update [self next-self next-state]
+    (let [ace-instance (:ace-instance next-state)]
+      (set-value! ace-instance (-> next-self :morph :value)))))
+
+(defcomponent editor [self owner]
+  (init-state [_] {:editor-chan (chan)})
+  (render-state [_ {:keys [editor-chan]}]
+    (->editor-area self {:init-state {:editor-chan editor-chan}})))
+
+(defmethod shape "AceMorph" [self owner]
+  (->editor self))

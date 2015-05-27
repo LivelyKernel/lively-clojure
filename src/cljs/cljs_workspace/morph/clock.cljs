@@ -81,6 +81,6 @@
              :ShapeClass "Ellipse"
              :BorderWidth 4
              :BorderColor "darkgrey"
-             :Fill "linear-gradient(to bottom, #f0f0f0, #e9e9e9)"
+             :Fill "-webkit-gradient(radial, 50% 50%, 0, 50% 50%, 250, from(rgb(255, 255, 255)), to(rgb(224, 224, 224)))"
              :DropShadow true}
      :submorphs submorphs}))

@@ -59,7 +59,14 @@
 
 (def clock (create-clock $morph {:x 501 :y 501}))
 
+(def ace-editor {:id "ace"
+                 :morph {:Position {:x 0 :y 30}
+                         :value (str clock)}
+                 :shape {:ShapeClass "AceMorph"
+                         :Extent {:x 200 :y 250}}})
+
 (morphic/add-morph ($morph "World") world-workspace-a)
+(morphic/add-morph ($morph "WorkspaceA") ace-editor)
 (morphic/add-morph ($morph "World") clock)
 (morphic/add-morph ($morph "World") world-workspace-b)
 

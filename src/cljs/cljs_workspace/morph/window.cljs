@@ -68,7 +68,7 @@
    :shape {:Extent {:x 200 :y 30}}
    :submorphs [(name-morph target-id) (min-box $morph target-id) (close-box $morph target-id)]})
 
-(defn resize-button [owner-extent]
+(defn resize-button [$morph owner-extent]
   {:id "Button"
    :morph {:Position (morphic/add-points owner-extent {:x 5 :y 5}) 
            :isDraggable true
@@ -91,4 +91,4 @@
            :BorderRadius 10
            :BorderWidth 1
            :DropShadow true}
-   :submorphs [(resize-button extent), (window-bar $morph name)]})
+   :submorphs [(resize-button $morph extent), (window-bar $morph name)]})
