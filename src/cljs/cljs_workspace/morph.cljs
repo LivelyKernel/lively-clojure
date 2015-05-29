@@ -8,7 +8,7 @@
             [goog.style :as gstyle]
             [goog.dom :as gdom]
             [cljs-workspace.draggable :as draggable :refer [clicked-morph]]
-            [om-tools.core :refer-macros [defcomponent]])
+          )
   (:import [goog.events EventType]))
 
 (enable-console-print!)
@@ -211,7 +211,8 @@
     (om/update! ->morph [:morph :Visible] true)))
 
 (defn set-extent [->morph extent]
-  (om/update! ->morph [:shape :Extent] extent))
+  (om/update! ->morph [:shape :Extent] extent)
+  (when-let [cb (get-in ->morph [:morph :onResize])] (cb ->morph)))
 
 (defn set-border-color [->morph fill]
   (om/update! ->morph [:shape :BorderColor] fill))
@@ -414,33 +415,41 @@
 (defn change-handler [ace-instance owner]
   (om/set-state-nr! owner :edited-value (.getValue ace-instance)))
 
-(defcomponent editor-area [self owner]
-  (render [_]
-          (dom/div #js {:id "ace" :style #js {:height (-> self :shape :Extent :y) :width (-> self :shape :Extent :x)} :className "ace"}))
-  (will-mount [_]
-    (let [editor-chan (om/get-state owner :editor-chan)]
-      (go
-        (while true
-          (when (= :save! (<! editor-chan))
-            (when-let [edited-value (om/get-state owner :edited-value)]
-              (om/update! self [:morph :value] edited-value)))))))
-  (did-mount [_]
-    (let [ace-instance (.edit js/ace
-                              (.getDOMNode owner))]
-      (om/set-state-nr! owner :ace-instance ace-instance)
-      (.. ace-instance
-          getSession
-          (on "change" #(change-handler ace-instance owner)))
-      (prn "setting value to" (-> self :morph :value))
-      (set-value! ace-instance (-> self :morph :value))))
-  (will-update [self next-self next-state]
-    (let [ace-instance (:ace-instance next-state)]
-      (set-value! ace-instance (-> next-self :morph :value)))))
+(defn editor-area [self owner]
+  (reify
+    om/IRender
+    (render [_]
+            (dom/div #js {:id "ace" :style #js {:height (-> self :shape :Extent :y) :width (-> self :shape :Extent :x)} :className "ace"}))
+    om/IWillMount
+    (will-mount [_]
+                (let [editor-chan (om/get-state owner :editor-chan)]
+                  (go
+                   (while true
+                     (when (= :save! (<! editor-chan))
+                       (when-let [edited-value (om/get-state owner :edited-value)]
+                         (om/update! self [:morph :value] edited-value)))))))
+    om/IDidMount
+    (did-mount [_]
+               (let [ace-instance (.edit js/ace
+                                         (.getDOMNode owner))]
+                 (om/set-state-nr! owner :ace-instance ace-instance)
+                 (.. ace-instance
+                     getSession
+                     (on "change" #(change-handler ace-instance owner)))
+                 (prn "setting value to" (-> self :morph :value))
+                 (set-value! ace-instance (-> self :morph :value))))
+    om/IWillUpdate
+    (will-update [self next-self next-state]
+                 (let [ace-instance (:ace-instance next-state)]
+                   (set-value! ace-instance (-> next-self :morph :value))))))
 
-(defcomponent editor [self owner]
-  (init-state [_] {:editor-chan (chan)})
-  (render-state [_ {:keys [editor-chan]}]
-    (->editor-area self {:init-state {:editor-chan editor-chan}})))
+(defn editor [self owner]
+  (reify
+    om/IInitState
+    (init-state [_] {:editor-chan (chan)})
+    om/IRenderState
+    (render-state [_ {:keys [editor-chan]}]
+                  (om/build editor-area self {:init-state {:editor-chan editor-chan}}))))
 
 (defmethod shape "AceMorph" [self owner]
-  (->editor self))
+  (om/build editor self))
