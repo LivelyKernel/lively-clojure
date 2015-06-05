@@ -13,7 +13,7 @@
    [compojure/compojure "1.3.2"]
    [ring "1.3.1"]
    [fogus/ring-edn "0.2.0"]
-   [om "0.8.0-rc1"]
+   [org.omcljs/om "0.8.8"]
    [org.clojure/core.async "0.1.303.0-886421-alpha"]
    [cljs-tooling "0.1.7"]
-   [fipp "0.6.2"]])
+   [bostonou/cljs-pprint "0.0.4-SNAPSHOT"]])
