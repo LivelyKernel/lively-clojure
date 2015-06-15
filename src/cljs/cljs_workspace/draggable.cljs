@@ -46,7 +46,7 @@
           [prev-cursor-x, prev-cursor-y] @prev-cursor-pos
           [delta-x, delta-y] [(- (.-clientX e) prev-cursor-x) (- (.-clientY e) prev-cursor-y)]
           [new-pos-x, new-pos-y] [(+ (old-pos :x) delta-x) (+ (old-pos :y) delta-y)]
-          callback (get-in (@clicked-morph :>>) [:morph :onDrag])
+          callback (get-in (@clicked-morph :>>) [:_compiled_methods :onDrag])
           do-default (or (nil? callback) (callback @clicked-morph {:x new-pos-x :y new-pos-y}))]
         ; default behavior
         (when do-default (om/update! (@clicked-morph :>>) [:morph :Position] {:x new-pos-x :y new-pos-y})))))

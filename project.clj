@@ -16,4 +16,5 @@
    [org.omcljs/om "0.8.8"]
    [org.clojure/core.async "0.1.303.0-886421-alpha"]
    [cljs-tooling "0.1.7"]
-   [bostonou/cljs-pprint "0.0.4-SNAPSHOT"]])
+   [bostonou/cljs-pprint "0.0.4-SNAPSHOT"]
+   [prismatic/om-tools "0.3.11"]])
